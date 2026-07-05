@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+python-multipart
+pydantic
+sqlalchemy
+pandas
+numpy
+scikit-learn
+opencv-python
+pillow
+python-dotenv
+
+
