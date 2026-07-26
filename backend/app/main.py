@@ -12,6 +12,7 @@ from app.api.disease_detection import router as disease_router
 from app.api.alerts import router as alerts_router
 from app.api.dashboard import router as dashboard_router
 from app.api.controls import router as controls_router
+from app.api.auth import router as auth_router
 
 app = FastAPI(
     title="HydroNutri IntelliSense API",
@@ -44,6 +45,7 @@ app.include_router(disease_router)
 app.include_router(alerts_router)
 app.include_router(dashboard_router)
 app.include_router(controls_router)
+app.include_router(auth_router)
 
 
 @app.get("/")

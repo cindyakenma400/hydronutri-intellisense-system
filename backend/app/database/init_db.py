@@ -12,6 +12,7 @@ from app.models.fertilization import Fertilization
 from app.models.recommendation import Recommendation
 from app.models.disease import DiseaseDetection
 from app.models.control import SystemControl
+from app.models.user import User
 
 
 def _add_missing_columns():

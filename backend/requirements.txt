@@ -11,3 +11,5 @@ opencv-python
 pillow
 python-dotenv
 requests
+bcrypt
+PyJWT
