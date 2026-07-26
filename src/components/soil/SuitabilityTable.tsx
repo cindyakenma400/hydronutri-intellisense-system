@@ -1,22 +1,12 @@
-export default function SuitabilityTable() {
-  const data = [
-    {
-      crop: "Tomato",
-      suitability: "92%",
-      status: "Excellent",
-    },
-    {
-      crop: "Onion",
-      suitability: "85%",
-      status: "Good",
-    },
-    {
-      crop: "Maize",
-      suitability: "78%",
-      status: "Moderate",
-    },
-  ];
+import { CropScore } from "@/types/recommendation";
 
+interface SuitabilityTableProps {
+  crops: CropScore[];
+}
+
+export default function SuitabilityTable({
+  crops,
+}: SuitabilityTableProps) {
   return (
     <div className="bg-white rounded-xl shadow p-6">
       <h2 className="text-xl font-semibold mb-4">
@@ -33,11 +23,11 @@ export default function SuitabilityTable() {
         </thead>
 
         <tbody>
-          {data.map((row) => (
+          {crops.map((row) => (
             <tr key={row.crop} className="border-b">
               <td className="p-2">{row.crop}</td>
+              <td className="p-2">{row.score}%</td>
               <td className="p-2">{row.suitability}</td>
-              <td className="p-2">{row.status}</td>
             </tr>
           ))}
         </tbody>

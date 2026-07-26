@@ -1,36 +1,21 @@
-# dependencies
+# dependencies (recreated by npm install - too big for GitHub)
 node_modules/
 .pnp
+
+# build outputs (recreated by npm run dev)
+.next/
+out/
+build/
+dist/
 
 # logs
 *.log
 npm-debug.log*
 yarn-debug.log*
 
-# runtime
-pids
-*.pid
-*.seed
-
-# coverage
-coverage/
-
-# build outputs
-.next/
-out/
-build/
-dist/
-
-# environment
+# environment secrets
 .env*
 !.env.example
 
 # OS
 .DS_Store
-
-# Python
-__pycache__/
-*.pyc
-
-# IDE
-.vscode/

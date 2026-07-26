@@ -6,8 +6,8 @@ sqlalchemy
 pandas
 numpy
 scikit-learn
+joblib
 opencv-python
 pillow
 python-dotenv
-
-
+requests

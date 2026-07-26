@@ -1,3 +1,4 @@
+import Link from "next/link";
 
 export default function DiseaseAlertCard() {
   return (
@@ -7,31 +8,21 @@ export default function DiseaseAlertCard() {
       </h2>
 
       <div className="mt-4">
-        <div className="h-40 bg-gray-100 rounded-lg flex items-center justify-center">
+        <div className="h-40 bg-gray-100 rounded-lg flex items-center justify-center text-gray-500">
           Leaf Image
         </div>
 
-        <p className="mt-4">
-          Disease:
-          <span className="text-red-600 font-bold ml-2">
-            Early Blight
-          </span>
+        <p className="mt-4 text-sm text-gray-600">
+          Upload a leaf photo to analyze your crop for diseases
+          using the AI model.
         </p>
 
-        <p className="mt-2">
-          Confidence:
-          <span className="font-bold ml-2">
-            92%
-          </span>
-        </p>
-
-        <p className="mt-2 text-sm text-gray-600">
-          Apply approved pesticide and remove infected leaves.
-        </p>
-
-        <button className="mt-4 bg-green-700 text-white px-4 py-2 rounded-lg">
+        <Link
+          href="/disease-detection"
+          className="mt-4 inline-block bg-green-700 text-white px-4 py-2 rounded-lg hover:bg-green-800 transition"
+        >
           Upload Leaf Image
-        </button>
+        </Link>
       </div>
     </div>
   );

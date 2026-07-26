@@ -24,6 +24,8 @@ class SensorReading(Base):
 
     ph = Column(Float)
 
+    ec = Column(Float, default=0.0)
+
     nitrogen = Column(Float)
     phosphorus = Column(Float)
     potassium = Column(Float)

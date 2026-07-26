@@ -1,19 +1,6 @@
-import { getSensorData } from "./sensorService";
-import { getBestCrop } from "@/utils/cropHelpers";
+import { apiGet } from "@/lib/api";
+import { DashboardSummary } from "@/types/dashboard";
 
-export function getDashboardData() {
-  const sensors = getSensorData();
-
-  const crop = getBestCrop(sensors.moisture, sensors.ph);
-
-  const pump = {
-    isOn: sensors.moisture < 30,
-    mode: "AUTO" as const,
-  };
-
-  return {
-    sensors,
-    pump,
-    recommendations: [crop],
-  };
+export function getDashboardSummary() {
+  return apiGet<DashboardSummary>("/dashboard/summary");
 }

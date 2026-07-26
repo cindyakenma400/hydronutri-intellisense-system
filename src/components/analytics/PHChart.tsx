@@ -1,14 +1,55 @@
-export default function PHChart() {
+"use client";
+
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  ResponsiveContainer,
+} from "recharts";
+
+import { SensorReading } from "@/types/sensor";
+
+interface ChartProps {
+  history: SensorReading[];
+}
+
+export default function PHChart({
+  history,
+}: ChartProps) {
+  const data = [...history]
+    .reverse()
+    .slice(-30)
+    .map((reading) => ({
+      time: new Date(reading.created_at).toLocaleTimeString(),
+      ph: reading.ph,
+    }));
+
   return (
     <div className="bg-white rounded-xl shadow p-6">
       <h2 className="text-lg font-semibold mb-4">
         Soil pH Trend
       </h2>
 
-      <div className="h-64 flex items-center justify-center border rounded-lg bg-gray-50">
-        <p className="text-gray-500">
-          pH Trend Chart
-        </p>
+      <div className="h-64">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="time" tick={{ fontSize: 11 }} />
+            <YAxis domain={[4, 9]} />
+            <Tooltip />
+            <Line
+              type="monotone"
+              dataKey="ph"
+              stroke="#16a34a"
+              strokeWidth={2}
+              dot={false}
+              isAnimationActive={false}
+            />
+          </LineChart>
+        </ResponsiveContainer>
       </div>
 
       <p className="mt-4 text-sm text-gray-600">

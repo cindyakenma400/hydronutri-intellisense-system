@@ -1,4 +1,13 @@
 from fastapi import APIRouter
+from fastapi import Depends
+from fastapi import HTTPException
+
+from sqlalchemy.orm import Session
+from datetime import datetime
+
+from pydantic import BaseModel
+
+from app.database.dependencies import get_db
 
 from app.schemas.alert_schema import (
     Alert,
@@ -6,7 +15,13 @@ from app.schemas.alert_schema import (
 )
 
 from app.services.alert_service import (
-    generate_alerts
+    generate_alerts,
+    save_alerts,
+    get_alert_history
+)
+
+from app.services.sensor_service import (
+    get_latest_sensor_reading
 )
 
 router = APIRouter(
@@ -15,21 +30,38 @@ router = APIRouter(
 )
 
 
+class AlertHistoryItem(BaseModel):
+    id: int
+    alert_type: str
+    message: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 @router.get(
     "/",
     response_model=AlertResponse
 )
-def get_alerts():
+def get_alerts(
+    db: Session = Depends(get_db)
+):
 
-    # Temporary values
-    # Later these will come from ESP32 sensors
-    soil_moisture = 25
-    soil_ph = 8.2
+    sensor = get_latest_sensor_reading(db)
 
-    alert_data = generate_alerts(
-        soil_moisture,
-        soil_ph
-    )
+    if sensor is None:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "No sensor readings available yet. "
+                "Upload sensor data first."
+            )
+        )
+
+    alert_data = generate_alerts(sensor)
+
+    save_alerts(db, alert_data)
 
     alerts = [
         Alert(**item)
@@ -40,3 +72,14 @@ def get_alerts():
         total_alerts=len(alerts),
         alerts=alerts
     )
+
+
+@router.get(
+    "/history",
+    response_model=list[AlertHistoryItem]
+)
+def alert_history(
+    db: Session = Depends(get_db)
+):
+
+    return get_alert_history(db)

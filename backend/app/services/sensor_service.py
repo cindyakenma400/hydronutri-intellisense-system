@@ -15,7 +15,8 @@ def create_sensor_reading(
         nitrogen=sensor_data.nitrogen,
         phosphorus=sensor_data.phosphorus,
         potassium=sensor_data.potassium,
-        ph=sensor_data.ph
+        ph=sensor_data.ph,
+        ec=sensor_data.ec
     )
 
     db.add(reading)
@@ -41,16 +42,3 @@ def get_latest_sensor_reading(db: Session):
         .order_by(SensorReading.created_at.desc())
         .first()
     )
-
-
-def get_sensor_data():
-
-    return {
-        "temperature": 28,
-        "humidity": 72,
-        "soil_moisture": 65,
-        "nitrogen": 70,
-        "phosphorus": 45,
-        "potassium": 60,
-        "ph": 6.5
-    }

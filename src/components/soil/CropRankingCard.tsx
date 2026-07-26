@@ -1,10 +1,12 @@
-export default function CropRankingCard() {
-  const crops = [
-    { crop: "Tomato", score: 92 },
-    { crop: "Onion", score: 85 },
-    { crop: "Maize", score: 78 },
-  ];
+import { CropScore } from "@/types/recommendation";
 
+interface CropRankingCardProps {
+  crops: CropScore[];
+}
+
+export default function CropRankingCard({
+  crops,
+}: CropRankingCardProps) {
   return (
     <div className="bg-white rounded-xl shadow p-6">
       <h2 className="text-xl font-semibold mb-4">

@@ -1,9 +1,11 @@
- interface PumpIndicatorProps {
+interface PumpIndicatorProps {
   status?: "ON" | "OFF";
+  mode?: string;
 }
 
 export default function PumpIndicator({
-  status = "ON",
+  status = "OFF",
+  mode = "Auto Mode",
 }: PumpIndicatorProps) {
   const isOn = status === "ON";
 
@@ -24,6 +26,10 @@ export default function PumpIndicator({
 
         <span className="text-2xl font-bold">
           {status}
+        </span>
+
+        <span className="ml-2 text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+          {mode}
         </span>
       </div>
 

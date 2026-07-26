@@ -1,4 +1,14 @@
-export default function FertilizerRecommendation() {
+interface FertilizerRecommendationProps {
+  recommendations: string[];
+}
+
+export default function FertilizerRecommendation({
+  recommendations,
+}: FertilizerRecommendationProps) {
+  const allGood =
+    recommendations.length === 1 &&
+    recommendations[0].includes("acceptable range");
+
   return (
     <div className="bg-white rounded-xl shadow p-6">
       <h2 className="text-lg font-semibold mb-4">
@@ -6,35 +16,31 @@ export default function FertilizerRecommendation() {
       </h2>
 
       <div className="space-y-3">
-        <div className="p-3 rounded-lg bg-yellow-50 border border-yellow-200">
-          <p className="font-medium">
-            Potassium Deficiency Detected
-          </p>
+        {recommendations.map((item, index) => (
+          <div
+            key={index}
+            className={`p-3 rounded-lg border ${
+              allGood
+                ? "bg-green-50 border-green-200"
+                : "bg-yellow-50 border-yellow-200"
+            }`}
+          >
+            <p className="font-medium">{item}</p>
+          </div>
+        ))}
 
-          <p className="text-sm text-gray-600 mt-1">
-            Current potassium level is below the recommended threshold.
-          </p>
-        </div>
+        {!allGood && (
+          <div className="p-3 rounded-lg bg-blue-50 border border-blue-200">
+            <p className="font-medium">
+              Expected Outcome
+            </p>
 
-        <div className="p-3 rounded-lg bg-green-50 border border-green-200">
-          <p className="font-medium">
-            Recommended Action
-          </p>
-
-          <p className="text-sm text-gray-600 mt-1">
-            Apply NPK fertilizer with a higher potassium ratio within the next irrigation cycle.
-          </p>
-        </div>
-
-        <div className="p-3 rounded-lg bg-blue-50 border border-blue-200">
-          <p className="font-medium">
-            Expected Outcome
-          </p>
-
-          <p className="text-sm text-gray-600 mt-1">
-            Improved crop growth and nutrient balance for maize, tomato, and onion crops.
-          </p>
-        </div>
+            <p className="text-sm text-gray-600 mt-1">
+              Improved crop growth and nutrient balance for maize,
+              tomato, and onion crops.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

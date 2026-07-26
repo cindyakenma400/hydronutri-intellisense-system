@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 from fastapi import Depends
+from fastapi import HTTPException
 
 from sqlalchemy.orm import Session
 
@@ -33,6 +34,15 @@ def analyze_soil(
 ):
 
     sensor = get_latest_sensor_reading(db)
+
+    if sensor is None:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "No sensor readings available yet. "
+                "Upload sensor data first."
+            )
+        )
 
     result = assess_soil(
         sensor.nitrogen,

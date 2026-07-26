@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from datetime import datetime
+from typing import Optional
 
 
 class SensorCreate(BaseModel):
@@ -10,6 +11,7 @@ class SensorCreate(BaseModel):
     phosphorus: float
     potassium: float
     ph: float
+    ec: float = 0.0
 
 
 class SensorResponse(BaseModel):
@@ -24,6 +26,7 @@ class SensorResponse(BaseModel):
     potassium: float
 
     ph: float
+    ec: Optional[float] = 0.0
 
     created_at: datetime
 

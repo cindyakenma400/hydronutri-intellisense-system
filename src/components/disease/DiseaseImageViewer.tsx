@@ -1,5 +1,3 @@
-import Image from "next/image";
-
 interface DiseaseImageViewerProps {
   imageUrl?: string;
 }
@@ -15,11 +13,11 @@ export default function DiseaseImageViewer({
 
       <div className="relative border rounded-lg overflow-hidden h-72 bg-gray-100">
         {imageUrl ? (
-          <Image
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
             src={imageUrl}
             alt="Leaf"
-            fill
-            className="object-cover"
+            className="w-full h-full object-cover"
           />
         ) : (
           <div className="h-full flex items-center justify-center">

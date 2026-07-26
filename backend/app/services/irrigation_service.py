@@ -42,3 +42,11 @@ def save_irrigation_log(
     db.refresh(irrigation)
 
     return irrigation
+
+def get_irrigation_history(db: Session):
+
+    return (
+        db.query(Irrigation)
+        .order_by(Irrigation.created_at.desc())
+        .all()
+    )

@@ -1,4 +1,16 @@
-export default function IrrigationRecommendation() {
+import { IrrigationStatus } from "@/types/sensor";
+
+interface IrrigationRecommendationProps {
+  status: IrrigationStatus | null;
+}
+
+export default function IrrigationRecommendation({
+  status,
+}: IrrigationRecommendationProps) {
+  if (!status) return null;
+
+  const needsWater = status.irrigation_needed;
+
   return (
     <div className="bg-white rounded-xl shadow p-6">
       <h2 className="text-lg font-semibold mb-4">
@@ -6,25 +18,34 @@ export default function IrrigationRecommendation() {
       </h2>
 
       <div className="space-y-4">
-        <div className="p-3 rounded-lg bg-yellow-50 border border-yellow-200">
-          <p className="font-medium">
-            Moisture Below Optimal Threshold
-          </p>
+        <div
+          className={`p-3 rounded-lg border ${
+            needsWater
+              ? "bg-yellow-50 border-yellow-200"
+              : "bg-green-50 border-green-200"
+          }`}
+        >
+          <p className="font-medium">{status.message}</p>
 
           <p className="text-sm text-gray-600 mt-1">
-            Soil moisture is approaching the lower limit required for healthy crop growth.
+            {needsWater
+              ? "Soil moisture is below the optimal range for healthy crop growth."
+              : "Soil moisture is within the optimal range. No action needed."}
           </p>
         </div>
 
-        <div className="p-3 rounded-lg bg-green-50 border border-green-200">
-          <p className="font-medium">
-            Recommended Action
-          </p>
+        {needsWater && (
+          <div className="p-3 rounded-lg bg-green-50 border border-green-200">
+            <p className="font-medium">
+              Recommended Action
+            </p>
 
-          <p className="text-sm text-gray-600 mt-1">
-            Activate irrigation system for approximately 15 minutes.
-          </p>
-        </div>
+            <p className="text-sm text-gray-600 mt-1">
+              Apply approximately {status.water_amount_liters} liters
+              of water per plot.
+            </p>
+          </div>
+        )}
 
         <div className="p-3 rounded-lg bg-blue-50 border border-blue-200">
           <p className="font-medium">
@@ -32,7 +53,8 @@ export default function IrrigationRecommendation() {
           </p>
 
           <p className="text-sm text-gray-600 mt-1">
-            Soil moisture will return to the optimal range for maize, tomato, and onion cultivation.
+            Soil moisture will stay in the optimal range for maize,
+            tomato, and onion cultivation.
           </p>
         </div>
       </div>

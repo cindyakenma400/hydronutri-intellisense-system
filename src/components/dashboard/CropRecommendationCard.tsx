@@ -1,11 +1,12 @@
+import { CropScore } from "@/types/recommendation";
 
-export default function CropRecommendation() {
-  const crops = [
-    { crop: "Onion", score: 92 },
-    { crop: "Tomato", score: 81 },
-    { crop: "Maize", score: 68 },
-  ];
+interface CropRecommendationProps {
+  crops: CropScore[];
+}
 
+export default function CropRecommendation({
+  crops,
+}: CropRecommendationProps) {
   return (
     <div className="bg-white rounded-xl shadow p-6">
       <h2 className="font-semibold text-lg">
