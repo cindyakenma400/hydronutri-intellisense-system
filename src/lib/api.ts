@@ -13,6 +13,13 @@ export class ApiError extends Error {
   }
 }
 
+function authHeaders(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+
+  const token = localStorage.getItem("token");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     let detail = `Request failed (${response.status})`;
@@ -33,6 +40,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
 export async function apiGet<T>(path: string): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     cache: "no-store",
+    headers: authHeaders(),
   });
 
   return handleResponse<T>(response);
@@ -42,6 +50,24 @@ export async function apiPost<T>(path: string): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: "POST",
     cache: "no-store",
+    headers: authHeaders(),
+  });
+
+  return handleResponse<T>(response);
+}
+
+export async function apiPostJson<T>(
+  path: string,
+  body: unknown
+): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: "POST",
+    cache: "no-store",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(),
+    },
+    body: JSON.stringify(body),
   });
 
   return handleResponse<T>(response);
@@ -58,6 +84,7 @@ export async function apiUpload<T>(
     method: "POST",
     body: formData,
     cache: "no-store",
+    headers: authHeaders(),
   });
 
   return handleResponse<T>(response);

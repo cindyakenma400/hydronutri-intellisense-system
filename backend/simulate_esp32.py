@@ -50,6 +50,10 @@ SCENARIOS = {
 }
 
 
+def clamp(value, low, high):
+    return max(low, min(high, value))
+
+
 def drift(state):
     """Applies small random drift so charts look like live data."""
     state["soil_moisture"] = clamp(state["soil_moisture"] + random.uniform(-2.0, 2.0), 5, 95)
@@ -61,10 +65,6 @@ def drift(state):
     state["temperature"] = clamp(state["temperature"] + random.uniform(-0.4, 0.4), 15, 45)
     state["humidity"] = clamp(state["humidity"] + random.uniform(-1.5, 1.5), 20, 100)
     return state
-
-
-def clamp(value, low, high):
-    return max(low, min(high, value))
 
 
 def build_payload(state):
@@ -96,6 +96,9 @@ def main():
     state = dict(SCENARIOS[args.scenario])
     sent = 0
 
+    # Reuse one connection for all readings (more reliable on Windows)
+    session = requests.Session()
+
     print(f"Simulating ESP32 ({args.scenario} soil) -> {args.url}")
     print("Press Ctrl+C to stop.\n")
 
@@ -103,10 +106,12 @@ def main():
         payload = build_payload(state)
 
         try:
-            response = requests.post(args.url, json=payload, timeout=5)
+            response = session.post(args.url, json=payload, timeout=10)
             print(f"[{sent + 1:>4}] {response.status_code} {payload}")
-        except requests.exceptions.ConnectionError:
-            print("Backend not reachable. Is uvicorn running on port 8000?")
+        except Exception as error:
+            # Show the REAL error instead of a generic message,
+            # then keep trying so a brief hiccup doesn't stop the run.
+            print(f"[{sent + 1:>4}] Could not send reading: {type(error).__name__}: {error}")
 
         sent += 1
         if args.count and sent >= args.count:
