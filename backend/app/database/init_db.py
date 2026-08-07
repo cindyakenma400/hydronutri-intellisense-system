@@ -15,27 +15,41 @@ from app.models.control import SystemControl
 from app.models.user import User
 
 
+def _add_column(table, column, definition):
+    """Adds one column if the table exists and the column does not."""
+    inspector = inspect(engine)
+
+    if table not in inspector.get_table_names():
+        return
+
+    existing = [
+        col["name"]
+        for col in inspector.get_columns(table)
+    ]
+
+    if column in existing:
+        return
+
+    with engine.begin() as conn:
+        conn.execute(text(
+            f"ALTER TABLE {table} ADD COLUMN {column} {definition}"
+        ))
+
+    print(f"Migration: added '{column}' column to {table}")
+
+
 def _add_missing_columns():
     """
     Lightweight migration: adds columns that were introduced
     after the database file was first created, without losing
     any existing data.
     """
-    inspector = inspect(engine)
+    _add_column("sensor_readings", "ec", "FLOAT DEFAULT 0.0")
 
-    if "sensor_readings" in inspector.get_table_names():
-        existing = [
-            col["name"]
-            for col in inspector.get_columns("sensor_readings")
-        ]
-
-        if "ec" not in existing:
-            with engine.begin() as conn:
-                conn.execute(text(
-                    "ALTER TABLE sensor_readings "
-                    "ADD COLUMN ec FLOAT DEFAULT 0.0"
-                ))
-            print("Migration: added 'ec' column to sensor_readings")
+    # Read state and severity for the navbar alerts badge.
+    _add_column("alerts", "severity", "VARCHAR DEFAULT 'info'")
+    _add_column("alerts", "is_read", "BOOLEAN DEFAULT 0")
+    _add_column("alerts", "is_active", "BOOLEAN DEFAULT 1")
 
 
 def init_db():

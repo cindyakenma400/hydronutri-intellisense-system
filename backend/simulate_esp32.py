@@ -14,7 +14,9 @@ Scenarios: normal | dry | acidic | nutrient_poor | saline
 """
 
 import argparse
+import os
 import random
+import sys
 import time
 
 import requests
@@ -80,6 +82,64 @@ def build_payload(state):
     }
 
 
+def preflight(session, url):
+    """
+    Checks the backend is actually up BEFORE streaming readings.
+
+    Nearly every 'backend not reachable' run has one cause: the uvicorn
+    terminal is not running. Catching it here gives a clear instruction
+    instead of an endless wall of connection errors.
+    """
+    root = url.split("/sensor")[0]
+
+    try:
+        response = session.get(root, timeout=5)
+    except requests.exceptions.ConnectionError as error:
+        print("\n" + "=" * 58)
+        print("CANNOT REACH THE BACKEND")
+        print("=" * 58)
+        print(f"Nothing answered at {root}")
+        print()
+        print("Underlying error:")
+        print(f"  {error}")
+        print()
+
+        # A proxy set in the environment is the usual reason a browser
+        # can reach localhost but Python cannot.
+        proxies = {
+            name: value
+            for name, value in os.environ.items()
+            if name.upper() in (
+                "HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "NO_PROXY"
+            )
+        }
+
+        if proxies:
+            print("Proxy variables found in your environment:")
+            for name, value in proxies.items():
+                print(f"  {name} = {value}")
+            print()
+            print("This simulator already ignores them, so if you still")
+            print("see this message the backend itself is not listening.")
+            print()
+
+        print("If the backend is not running, open a SEPARATE terminal:")
+        print()
+        print("    cd C:\\Users\\ASA\\hydronutri-intellisense-system\\backend")
+        print("    uvicorn app.main:app --reload")
+        print()
+        print("Wait for 'Application startup complete', leave that")
+        print("terminal open, then run this simulator again.")
+        print("=" * 58)
+        return False
+    except Exception as error:
+        print(f"Could not reach {root}: {type(error).__name__}: {error}")
+        return False
+
+    print(f"Backend is up at {root} ({response.status_code})")
+    return True
+
+
 def main():
     parser = argparse.ArgumentParser(description="ESP32 sensor simulator")
     parser.add_argument("--interval", type=float, default=5.0,
@@ -95,9 +155,19 @@ def main():
 
     state = dict(SCENARIOS[args.scenario])
     sent = 0
+    failures = 0
 
     # Reuse one connection for all readings (more reliable on Windows)
     session = requests.Session()
+
+    # Ignore HTTP_PROXY / HTTPS_PROXY from the environment. A proxy set
+    # system-wide (VPN, corporate network) makes requests try to route
+    # even 127.0.0.1 through it, which fails - while the browser reaches
+    # localhost fine because browsers bypass proxies for localhost.
+    session.trust_env = False
+
+    if not preflight(session, args.url):
+        sys.exit(1)
 
     print(f"Simulating ESP32 ({args.scenario} soil) -> {args.url}")
     print("Press Ctrl+C to stop.\n")
@@ -107,11 +177,30 @@ def main():
 
         try:
             response = session.post(args.url, json=payload, timeout=10)
-            print(f"[{sent + 1:>4}] {response.status_code} {payload}")
+
+            if response.status_code == 200:
+                failures = 0
+                print(f"[{sent + 1:>4}] 200 OK  {payload}")
+            else:
+                # Show the server's own explanation. A 422 lists the
+                # rejected field; a 500 carries the traceback.
+                failures += 1
+                print(f"[{sent + 1:>4}] {response.status_code} REJECTED")
+                print(f"       server said: {response.text[:400]}")
+
+        except requests.exceptions.ConnectionError:
+            failures += 1
+            print(f"[{sent + 1:>4}] Connection lost. Is the backend terminal "
+                  f"still running?")
         except Exception as error:
-            # Show the REAL error instead of a generic message,
-            # then keep trying so a brief hiccup doesn't stop the run.
-            print(f"[{sent + 1:>4}] Could not send reading: {type(error).__name__}: {error}")
+            failures += 1
+            print(f"[{sent + 1:>4}] {type(error).__name__}: {error}")
+
+        # Stop nagging if the backend has clearly gone away.
+        if failures >= 5:
+            print("\nFive failures in a row - stopping.")
+            print("Check the backend terminal for an error, then restart it.")
+            sys.exit(1)
 
         sent += 1
         if args.count and sent >= args.count:
@@ -119,6 +208,8 @@ def main():
 
         state = drift(state)
         time.sleep(args.interval)
+
+    print(f"\nDone. Sent {sent} readings.")
 
 
 if __name__ == "__main__":
