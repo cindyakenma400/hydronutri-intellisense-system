@@ -75,10 +75,18 @@ export async function apiPostJson<T>(
 
 export async function apiUpload<T>(
   path: string,
-  file: File
+  file: File,
+  fields?: Record<string, string>
 ): Promise<T> {
   const formData = new FormData();
   formData.append("file", file);
+
+  // Extra form fields (e.g. the selected crop) ride along with the file.
+  if (fields) {
+    for (const [key, value] of Object.entries(fields)) {
+      formData.append(key, value);
+    }
+  }
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: "POST",
@@ -86,6 +94,5 @@ export async function apiUpload<T>(
     cache: "no-store",
     headers: authHeaders(),
   });
-
   return handleResponse<T>(response);
 }

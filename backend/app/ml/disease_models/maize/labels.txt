@@ -1,0 +1,5 @@
+0 Maize_Common Rust
+1 Maize_Northern Leaf Blight
+2 Maize_Streak Virus
+3 Maize_Gray Leaf Spot
+4 Maize_Healthy

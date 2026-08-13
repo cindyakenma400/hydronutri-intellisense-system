@@ -70,12 +70,11 @@ export default function IrrigationPage() {
   }
 
   const autoMode = controls?.auto_mode ?? true;
+  const manualPump = controls?.pump_on ?? false;
 
-  // Auto mode: automation decides. Manual mode: the toggle decides.
-  const pumpOn = autoMode
-    ? status.irrigation_needed
-    : controls?.pump_on ?? false;
-
+  // Manual override always wins. When the pump is manually on, it shows on.
+  // Otherwise, if auto mode is enabled, the automation decides.
+  const pumpOn = manualPump || (autoMode && status.irrigation_needed);
   return (
     <div className="space-y-6">
       <PageHeader

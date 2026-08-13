@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, File, UploadFile
+from fastapi import APIRouter, Depends, File, UploadFile, Form
 from sqlalchemy.orm import Session
 
 from app.database.dependencies import get_db
@@ -17,6 +17,8 @@ router = APIRouter(
 )
 async def analyze_disease(
     file: UploadFile = File(...),
+    crop: str = Form("tomato"),
+    source: str = Form("Web Upload"),
     db: Session = Depends(get_db),
 ):
     contents = await file.read()
@@ -25,6 +27,8 @@ async def analyze_disease(
         db,
         file.filename or "leaf.jpg",
         contents,
+        crop=crop,
+        image_source=source,
     )
 
     return DiseasePredictionResponse(**result)

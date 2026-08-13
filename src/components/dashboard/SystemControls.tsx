@@ -14,15 +14,25 @@ export default function SystemControl() {
   const [state, setState] = useState<ControlState | null>(null);
   const [busy, setBusy] = useState(false);
 
+  async function refresh() {
+    try {
+      const data = await apiGet<ControlState>("/controls/status");
+      setState(data);
+    } catch {
+      setState(null);
+    }
+  }
+
   useEffect(() => {
-    apiGet<ControlState>("/controls/status")
-      .then(setState)
-      .catch(() => setState(null));
+    // Polls an external system; the initial call avoids a blank UI on first render.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    refresh();
+    const timer = setInterval(refresh, 5000);
+    return () => clearInterval(timer);
   }, []);
 
   async function toggle(path: string) {
     setBusy(true);
-
     try {
       const updated = await apiPost<ControlState>(path);
       setState(updated);
@@ -39,9 +49,7 @@ export default function SystemControl() {
 
   return (
     <div className="bg-white rounded-xl shadow p-6">
-      <h2 className="font-semibold text-lg">
-        System Controls
-      </h2>
+      <h2 className="font-semibold text-lg">System Controls</h2>
 
       <div className="space-y-4 mt-4">
         <button
@@ -76,8 +84,9 @@ export default function SystemControl() {
       </div>
 
       <p className="text-xs text-gray-400 mt-4">
-        Manual overrides are saved to the database. In the full
-        system, the ESP32 polls this state to switch the relays.
+        Manual pump and valve controls always take effect. Auto mode runs
+        the pump from soil moisture when you have not overridden it. The
+        ESP32 polls this state to switch the physical relays.
       </p>
     </div>
   );

@@ -1,0 +1,5 @@
+0 Tomato_Early Blight
+1 Tomato_Bacterial Spot
+2 Tomato_Septoria Leaf Spot
+3 Tomato_Yellow Leaf Curl Virus
+4 Tomato_Healthy

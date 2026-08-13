@@ -1,0 +1,5 @@
+0 Onion_Botrytis Leaf Blight
+1 Onion_Purple Blotch
+2 Onion_Yellow Dwarf Virus
+3 Onion_Stemphylium Leaf Blight
+4 Onion_Healthy

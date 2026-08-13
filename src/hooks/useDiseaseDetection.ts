@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
 import {
   DiseaseResult,
   DiseaseHistoryItem,
@@ -30,11 +29,10 @@ export function useDiseaseDetection() {
     loadHistory();
   }, []);
 
-  async function analyze(file: File) {
+  async function analyze(file: File, crop: string = "tomato") {
     setLoading(true);
-
     try {
-      const data = await analyzeDisease(file);
+      const data = await analyzeDisease(file, crop);
       setResult(data);
       setError(null);
       await loadHistory();
