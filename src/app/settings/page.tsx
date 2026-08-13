@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 
 import PageHeader from "@/components/layout/PageHeader";
 import { apiGet, API_BASE_URL } from "@/lib/api";
@@ -163,22 +163,22 @@ function Toggle({
 /* -------------------------------------------------------------- the page */
 
 export default function SettingsPage() {
-  const [settings, setSettings] = useState<Settings>(DEFAULTS);
+  const [settings, setSettings] = useState<Settings>(() => {
+    if (typeof window === "undefined") return DEFAULTS;
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) return { ...DEFAULTS, ...JSON.parse(raw) };
+    } catch {
+      /* keep defaults */
+    }
+    return DEFAULTS;
+  });
   const [errors, setErrors] = useState<string[]>([]);
   const [toast, setToast] = useState<string | null>(null);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<
     { ok: boolean; ms?: number } | null
   >(null);
-
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) setSettings({ ...DEFAULTS, ...JSON.parse(raw) });
-    } catch {
-      /* keep defaults */
-    }
-  }, []);
 
   const showToast = useCallback((message: string) => {
     setToast(message);

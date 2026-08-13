@@ -15,7 +15,7 @@ export default function Navbar() {
   const [alerts, setAlerts] = useState<AlertResponse | null>(null);
   const [showAlerts, setShowAlerts] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
-  const [user, setUser] = useState<AuthUser | null>(() => getUser());
+  const [user] = useState<AuthUser | null>(() => getUser());
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Check backend status + fetch alerts, refreshed every 10s

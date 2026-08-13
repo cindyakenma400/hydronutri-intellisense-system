@@ -28,6 +28,7 @@ export default function DiseaseHistoryTable({
                 <th className="text-left py-2">Crop</th>
                 <th className="text-left py-2">Disease</th>
                 <th className="text-left py-2">Confidence</th>
+                <th className="text-left py-2">Severity</th>
                 <th className="text-left py-2">Source</th>
               </tr>
             </thead>
@@ -47,6 +48,10 @@ export default function DiseaseHistoryTable({
 
                   <td className="py-3">
                     {item.confidence}%
+                  </td>
+
+                  <td className="py-3">
+                    {item.severity}
                   </td>
 
                   <td className="py-3 text-sm text-gray-500">
