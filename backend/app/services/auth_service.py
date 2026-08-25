@@ -12,6 +12,7 @@ from app.models.user import User
 SECRET_KEY = "hydronutri-intellisense-secret-key-2026"
 ALGORITHM = "HS256"
 TOKEN_LIFETIME_DAYS = 7
+RESET_TOKEN_LIFETIME_MINUTES = 30
 
 
 def hash_password(password: str) -> str:
@@ -82,3 +83,51 @@ def get_user_from_token(db: Session, token: str) -> User | None:
         return None
 
     return db.query(User).filter(User.id == int(payload["sub"])).first()
+
+
+def update_profile(db: Session, user: User, full_name: str, phone: str) -> User:
+    user.full_name = full_name
+    user.phone = phone
+
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+def set_password(db: Session, user: User, new_password: str) -> None:
+    user.hashed_password = hash_password(new_password)
+
+    db.commit()
+    db.refresh(user)
+
+
+def create_reset_token(user: User) -> str:
+    payload = {
+        "sub": str(user.id),
+        "type": "reset",
+        "exp": datetime.utcnow() + timedelta(minutes=RESET_TOKEN_LIFETIME_MINUTES),
+    }
+
+    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+
+
+def get_user_from_reset_token(db: Session, token: str) -> User | None:
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+    except jwt.PyJWTError:
+        return None
+
+    if payload.get("type") != "reset":
+        return None
+
+    return db.query(User).filter(User.id == int(payload["sub"])).first()
+
+
+def send_password_reset_email(email: str, reset_link: str) -> None:
+    """Delivers the password reset link to the user.
+
+    SMTP is not configured yet, so the link is logged to the console
+    instead. Swapping this body for a real mail send later requires no
+    change to the API surface or the frontend.
+    """
+    print(f"[HydroNutri] Password reset requested for {email}: {reset_link}")

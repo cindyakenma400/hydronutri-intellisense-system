@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Bell, Settings, LayoutDashboard, LogOut } from "lucide-react";
 
-import { apiGet } from "@/lib/api";
+import { apiGet, apiPost } from "@/lib/api";
 import { AlertResponse } from "@/types/alert";
 import { getUser, logout, AuthUser } from "@/services/authService";
 
@@ -67,8 +67,24 @@ export default function Navbar() {
     router.replace("/login");
   }
 
-  const alertCount = alerts?.total_alerts ?? 0;
+  const alertCount = alerts?.unread_count ?? 0;
   const displayName = user?.full_name ?? "Farmer";
+
+  async function handleOpenAlerts() {
+    const opening = !showAlerts;
+    setShowAlerts(opening);
+    setShowProfile(false);
+
+    if (opening && (alerts?.unread_count ?? 0) > 0) {
+      try {
+        await apiPost("/alerts/read-all");
+        const alertData = await apiGet<AlertResponse>("/alerts/");
+        setAlerts(alertData);
+      } catch {
+        // ignore, next poll will retry
+      }
+    }
+  }
 
   return (
     <header className="bg-white shadow-sm px-8 py-4 flex items-center justify-between">
@@ -96,10 +112,7 @@ export default function Navbar() {
         {/* Alerts bell */}
         <div className="relative">
           <button
-            onClick={() => {
-              setShowAlerts(!showAlerts);
-              setShowProfile(false);
-            }}
+            onClick={handleOpenAlerts}
             className="relative p-1 rounded-full hover:bg-gray-100 transition"
           >
             <Bell className="text-gray-700" />
@@ -123,13 +136,13 @@ export default function Navbar() {
                     No active alerts. All readings are normal.
                   </p>
                 ) : (
-                  alerts.alerts.map((alert, index) => (
+                  alerts.alerts.map((alert) => (
                     <div
-                      key={index}
+                      key={`${alert.alert_type}-${alert.id}`}
                       className="p-4 border-b text-sm"
                     >
                       <p className="font-medium text-gray-800">
-                        {alert.type}
+                        {alert.alert_type}
                       </p>
                       <p className="text-gray-600 mt-1">
                         {alert.message}

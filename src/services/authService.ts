@@ -38,6 +38,47 @@ export function saveSession(response: AuthResponse) {
   localStorage.setItem("user", JSON.stringify(response.user));
 }
 
+export function updateStoredUser(user: AuthUser) {
+  localStorage.setItem("user", JSON.stringify(user));
+}
+
+export function updateProfile(fullName: string, phone: string) {
+  return apiPostJson<AuthUser>("/auth/update-profile", {
+    full_name: fullName,
+    phone,
+  });
+}
+
+export function changePassword(
+  currentPassword: string,
+  newPassword: string,
+  confirmPassword: string
+) {
+  return apiPostJson<{ message: string }>("/auth/change-password", {
+    current_password: currentPassword,
+    new_password: newPassword,
+    confirm_password: confirmPassword,
+  });
+}
+
+export function forgotPassword(email: string) {
+  return apiPostJson<{ message: string }>("/auth/forgot-password", {
+    email,
+  });
+}
+
+export function resetPassword(
+  token: string,
+  newPassword: string,
+  confirmPassword: string
+) {
+  return apiPostJson<{ message: string }>("/auth/reset-password", {
+    token,
+    new_password: newPassword,
+    confirm_password: confirmPassword,
+  });
+}
+
 export function getUser(): AuthUser | null {
   if (typeof window === "undefined") return null;
 

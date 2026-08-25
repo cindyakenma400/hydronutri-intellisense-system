@@ -31,7 +31,7 @@ IMG_SIZE = 224
 
 # Below this confidence we do not trust the prediction (bad frame,
 # not a leaf, blurry photo). Tunable.
-CONFIDENCE_THRESHOLD = 60.0
+CONFIDENCE_THRESHOLD = 35.0
 
 SUPPORTED_CROPS = ["tomato", "maize", "onion"]
 
@@ -245,8 +245,8 @@ def analyze_image(db: Session, filename: str, contents: bytes,
                 "confidence": confidence,
                 "severity": "Unknown",
                 "treatment": [
-                    "The image was not clear enough for a confident result.",
-                    "Take a close-up photo of a single leaf in good light.",
+                    "The result is not confident. Make sure you selected the correct "
+                    "crop, and upload a clear close-up of a single leaf in good light.",
                 ],
                 "status": "uncertain",
                 "image_source": f"{image_source} ({filename})",

@@ -17,7 +17,7 @@ export default function AppShell({
   const router = useRouter();
   const [ready, setReady] = useState(false);
 
-  const isLoginPage = pathname === "/login";
+  const isLoginPage = pathname === "/login" || pathname === "/reset-password";
 
   useEffect(() => {
     const loggedIn = isLoggedIn();

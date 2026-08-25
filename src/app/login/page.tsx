@@ -5,20 +5,26 @@ import { useRouter } from "next/navigation";
 import { Sprout } from "lucide-react";
 
 import {
+  forgotPassword,
   login,
   register,
   saveSession,
 } from "@/services/authService";
+import { ApiError } from "@/lib/api";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [mode, setMode] = useState<"login" | "register">("login");
+  const [mode, setMode] = useState<"login" | "register" | "forgot">("login");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotMessage, setForgotMessage] = useState<string | null>(null);
+  const [forgotLoading, setForgotLoading] = useState(false);
 
   async function handleSubmit() {
     setError(null);
@@ -41,6 +47,22 @@ export default function LoginPage() {
     }
   }
 
+  async function handleForgotPassword() {
+    setForgotMessage(null);
+    setForgotLoading(true);
+
+    try {
+      const response = await forgotPassword(forgotEmail);
+      setForgotMessage(response.message);
+    } catch (err) {
+      setForgotMessage(
+        err instanceof ApiError ? err.message : "Something went wrong"
+      );
+    } finally {
+      setForgotLoading(false);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-green-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
@@ -59,114 +81,187 @@ export default function LoginPage() {
         </div>
 
         <div className="bg-white rounded-2xl shadow-xl p-8">
-          <div className="flex rounded-lg bg-gray-100 p-1 mb-6">
-            <button
-              onClick={() => {
-                setMode("login");
-                setError(null);
-              }}
-              className={`flex-1 py-2 rounded-md text-sm font-medium transition ${
-                mode === "login"
-                  ? "bg-white shadow text-green-800"
-                  : "text-gray-500"
-              }`}
-            >
-              Sign In
-            </button>
-
-            <button
-              onClick={() => {
-                setMode("register");
-                setError(null);
-              }}
-              className={`flex-1 py-2 rounded-md text-sm font-medium transition ${
-                mode === "register"
-                  ? "bg-white shadow text-green-800"
-                  : "text-gray-500"
-              }`}
-            >
-              Create Account
-            </button>
-          </div>
-
-          <div className="space-y-4">
-            {mode === "register" && (
-              <>
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">
-                    Full Name
-                  </label>
-                  <input
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    placeholder="e.g. Ama Mensah"
-                    className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">
-                    Phone Number
-                  </label>
-                  <input
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="e.g. 024 400 0000"
-                    className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
-                  />
-                </div>
-              </>
-            )}
-
-            <div>
-              <label className="block text-sm text-gray-600 mb-1">
-                Email
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm text-gray-600 mb-1">
-                Password
-              </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-                placeholder={
-                  mode === "register"
-                    ? "At least 6 characters"
-                    : "Your password"
-                }
-                className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
-              />
-            </div>
-
-            {error && (
-              <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">
-                {error}
+          {mode === "forgot" ? (
+            <>
+              <h2 className="text-lg font-semibold text-gray-800 mb-1">
+                Reset your password
+              </h2>
+              <p className="text-sm text-gray-500 mb-6">
+                Enter the email on your account and we&apos;ll send you a link
+                to reset your password.
               </p>
-            )}
 
-            <button
-              onClick={handleSubmit}
-              disabled={loading}
-              className="w-full bg-green-700 text-white py-3 rounded-lg font-medium hover:bg-green-800 transition disabled:opacity-50"
-            >
-              {loading
-                ? "Please wait..."
-                : mode === "login"
-                ? "Sign In"
-                : "Create Account"}
-            </button>
-          </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm text-gray-600 mb-1">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    value={forgotEmail}
+                    onChange={(e) => setForgotEmail(e.target.value)}
+                    onKeyDown={(e) =>
+                      e.key === "Enter" && handleForgotPassword()
+                    }
+                    placeholder="you@example.com"
+                    className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                  />
+                </div>
+
+                {forgotMessage && (
+                  <p className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg p-3">
+                    {forgotMessage}
+                  </p>
+                )}
+
+                <button
+                  onClick={handleForgotPassword}
+                  disabled={forgotLoading || !forgotEmail}
+                  className="w-full bg-green-700 text-white py-3 rounded-lg font-medium hover:bg-green-800 transition disabled:opacity-50"
+                >
+                  {forgotLoading ? "Sending..." : "Send Reset Link"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode("login");
+                    setForgotMessage(null);
+                  }}
+                  className="w-full text-sm text-gray-500 hover:text-green-700 transition"
+                >
+                  Back to Sign In
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="flex rounded-lg bg-gray-100 p-1 mb-6">
+                <button
+                  onClick={() => {
+                    setMode("login");
+                    setError(null);
+                  }}
+                  className={`flex-1 py-2 rounded-md text-sm font-medium transition ${
+                    mode === "login"
+                      ? "bg-white shadow text-green-800"
+                      : "text-gray-500"
+                  }`}
+                >
+                  Sign In
+                </button>
+
+                <button
+                  onClick={() => {
+                    setMode("register");
+                    setError(null);
+                  }}
+                  className={`flex-1 py-2 rounded-md text-sm font-medium transition ${
+                    mode === "register"
+                      ? "bg-white shadow text-green-800"
+                      : "text-gray-500"
+                  }`}
+                >
+                  Create Account
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {mode === "register" && (
+                  <>
+                    <div>
+                      <label className="block text-sm text-gray-600 mb-1">
+                        Full Name
+                      </label>
+                      <input
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        placeholder="e.g. Ama Mensah"
+                        className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm text-gray-600 mb-1">
+                        Phone Number
+                      </label>
+                      <input
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder="e.g. 024 400 0000"
+                        className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                      />
+                    </div>
+                  </>
+                )}
+
+                <div>
+                  <label className="block text-sm text-gray-600 mb-1">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm text-gray-600 mb-1">
+                    Password
+                  </label>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+                    placeholder={
+                      mode === "register"
+                        ? "At least 6 characters"
+                        : "Your password"
+                    }
+                    className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                  />
+                </div>
+
+                {mode === "login" && (
+                  <div className="text-right -mt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMode("forgot");
+                        setError(null);
+                        setForgotMessage(null);
+                      }}
+                      className="text-sm text-green-700 hover:underline"
+                    >
+                      Forgot Password?
+                    </button>
+                  </div>
+                )}
+
+                {error && (
+                  <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">
+                    {error}
+                  </p>
+                )}
+
+                <button
+                  onClick={handleSubmit}
+                  disabled={loading}
+                  className="w-full bg-green-700 text-white py-3 rounded-lg font-medium hover:bg-green-800 transition disabled:opacity-50"
+                >
+                  {loading
+                    ? "Please wait..."
+                    : mode === "login"
+                    ? "Sign In"
+                    : "Create Account"}
+                </button>
+              </div>
+            </>
+          )}
         </div>
 
         <p className="text-center text-green-300 text-sm mt-6">

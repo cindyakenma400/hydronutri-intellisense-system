@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { apiGet, apiPost } from "@/lib/api";
 
@@ -13,8 +13,15 @@ interface ControlState {
 export default function SystemControl() {
   const [state, setState] = useState<ControlState | null>(null);
   const [busy, setBusy] = useState(false);
+  const busyRef = useRef(false);
+
+  function setBusyState(value: boolean) {
+    busyRef.current = value;
+    setBusy(value);
+  }
 
   async function refresh() {
+    if (busyRef.current) return;
     try {
       const data = await apiGet<ControlState>("/controls/status");
       setState(data);
@@ -32,14 +39,14 @@ export default function SystemControl() {
   }, []);
 
   async function toggle(path: string) {
-    setBusy(true);
+    setBusyState(true);
     try {
       const updated = await apiPost<ControlState>(path);
       setState(updated);
     } catch {
       // backend not reachable; keep current state
     } finally {
-      setBusy(false);
+      setBusyState(false);
     }
   }
 
