@@ -10,9 +10,9 @@ export default function AlertList({
 }: AlertListProps) {
   return (
     <div className="space-y-4">
-      {alerts.map((alert, index) => (
+      {alerts.map((alert) => (
         <AlertCard
-          key={index}
+          key={alert.id}
           alert={alert}
         />
       ))}

@@ -17,5 +17,6 @@ export interface DiseaseHistoryItem {
   confidence: number;
   severity: string;
   image_source: string;
+  image_url?: string | null;
   created_at: string;
 }

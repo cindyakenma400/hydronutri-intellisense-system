@@ -19,3 +19,10 @@ yarn-debug.log*
 
 # OS
 .DS_Store
+
+# python
+__pycache__/
+*.pyc
+*.db
+*.sqlite3
+backend/venv/

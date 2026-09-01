@@ -63,7 +63,16 @@ export default function AlertsPage() {
         description={`${data.total_alerts} active alert(s) based on the latest sensor reading`}
       />
 
-      <AlertList alerts={data.alerts} />
+      <div className="bg-white rounded-2xl shadow-sm p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <span className="w-2.5 h-2.5 rounded-full bg-green-500" />
+          <span className="text-sm font-medium text-gray-700">
+            {data.total_alerts} alert{data.total_alerts === 1 ? "" : "s"} found
+          </span>
+        </div>
+
+        <AlertList alerts={data.alerts} />
+      </div>
     </div>
   );
 }

@@ -47,10 +47,10 @@ export default function AppShell({
     <div className="flex">
       <Sidebar />
 
-      <div className="flex-1 min-h-screen bg-gray-100 flex flex-col">
+      <div className="flex-1 min-h-screen flex flex-col">
         <Navbar />
 
-        <main className="flex-1 p-8">
+        <main className="flex-1 p-8 bg-gray-50">
           {children}
         </main>
 

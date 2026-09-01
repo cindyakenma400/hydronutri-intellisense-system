@@ -294,6 +294,7 @@ def analyze_image(db: Session, filename: str, contents: bytes,
         severity=result["severity"],
         treatment=". ".join(result["treatment"]) if result["treatment"] else "None",
         image_source=result["image_source"],
+        image_filename=safe_name,
     )
     db.add(record)
     db.commit()

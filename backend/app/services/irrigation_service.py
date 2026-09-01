@@ -1,11 +1,42 @@
 from sqlalchemy.orm import Session
 
+from app.database.database import SessionLocal
 from app.models.irrigation import Irrigation
+from app.models.settings import SystemSettings
+
+
+def _get_settings() -> SystemSettings:
+    """
+    Reads the system settings row in its own short-lived session, so
+    get_irrigation_status() does not need a db session threaded through it.
+    """
+    db = SessionLocal()
+
+    try:
+        settings = db.query(SystemSettings).first()
+
+        if settings is None:
+            settings = SystemSettings()
+            db.add(settings)
+            db.commit()
+            db.refresh(settings)
+
+        return settings
+    finally:
+        db.close()
 
 
 def get_irrigation_status(soil_moisture):
+    settings = _get_settings()
 
-    if soil_moisture < 30:
+    if not settings.auto_irrigation:
+        return {
+            "irrigation_needed": False,
+            "water_amount_liters": 0.0,
+            "message": "Automatic irrigation is disabled"
+        }
+
+    if soil_moisture < settings.moisture_trigger:
         return {
             "irrigation_needed": True,
             "water_amount_liters": 15.0,

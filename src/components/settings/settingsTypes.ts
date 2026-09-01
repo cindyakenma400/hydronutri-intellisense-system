@@ -1,4 +1,3 @@
-import type { LucideIcon } from "lucide-react";
 import {
   Settings as SettingsIcon,
   User,
@@ -11,8 +10,6 @@ import {
   Cpu,
   Database,
   Info,
-  Camera,
-  Gauge,
 } from "lucide-react";
 
 export const STORAGE_KEY = "hydronutri.settings.v2";
@@ -84,21 +81,6 @@ export const DEFAULTS: Settings = {
   notifyDisease: true,
   notifySystem: true,
 };
-
-export type DeviceStatus = {
-  name: string;
-  model: string;
-  icon: LucideIcon;
-  online: boolean;
-};
-
-export const DEVICES: DeviceStatus[] = [
-  { name: "ESP32 Controller", model: "Main sensor & control hub", icon: Cpu, online: true },
-  { name: "ESP32-CAM", model: "Leaf imaging module", icon: Camera, online: true },
-  { name: "Soil Sensor", model: "CWT-SOIL-NPKPHCTH-S", icon: Gauge, online: true },
-  { name: "Water Pump", model: "Irrigation actuator", icon: Droplets, online: false },
-  { name: "Fertilizer Pump", model: "Nutrient dosing actuator", icon: FlaskConical, online: true },
-];
 
 export const NAV_SECTIONS = [
   { id: "general", label: "General", icon: SettingsIcon },

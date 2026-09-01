@@ -73,6 +73,23 @@ export async function apiPostJson<T>(
   return handleResponse<T>(response);
 }
 
+export async function apiPutJson<T>(
+  path: string,
+  body: unknown
+): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: "PUT",
+    cache: "no-store",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(),
+    },
+    body: JSON.stringify(body),
+  });
+
+  return handleResponse<T>(response);
+}
+
 export async function apiUpload<T>(
   path: string,
   file: File,

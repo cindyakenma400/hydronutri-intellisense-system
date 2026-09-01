@@ -1,6 +1,8 @@
 from sqlalchemy.orm import Session
 
+from app.database.database import SessionLocal
 from app.models.alert import Alert as AlertModel
+from app.models.settings import SystemSettings
 
 
 # Severity per alert type, used for colour coding in the UI.
@@ -13,59 +15,85 @@ SEVERITY_BY_TYPE = {
 }
 
 
+def _get_settings() -> SystemSettings:
+    """
+    Reads the system settings row in its own short-lived session, so
+    generate_alerts() does not need a db session threaded through it.
+    """
+    db = SessionLocal()
+
+    try:
+        settings = db.query(SystemSettings).first()
+
+        if settings is None:
+            settings = SystemSettings()
+            db.add(settings)
+            db.commit()
+            db.refresh(settings)
+
+        return settings
+    finally:
+        db.close()
+
+
 def generate_alerts(sensor):
     """
-    Builds alert messages from the latest sensor reading.
+    Builds alert messages from the latest sensor reading, respecting the
+    configured moisture trigger and notification toggles.
     """
     alerts = []
+    settings = _get_settings()
 
-    if sensor.soil_moisture < 30:
-        alerts.append({
-            "type": "Irrigation Alert",
-            "message": "Soil moisture is critically low."
-        })
+    if settings.notify_soil_moisture:
+        if sensor.soil_moisture < settings.moisture_trigger:
+            alerts.append({
+                "type": "Irrigation Alert",
+                "message": "Soil moisture is critically low."
+            })
 
-    elif sensor.soil_moisture > 85:
-        alerts.append({
-            "type": "Irrigation Alert",
-            "message": "Soil is waterlogged. Pause irrigation."
-        })
+        elif sensor.soil_moisture > 85:
+            alerts.append({
+                "type": "Irrigation Alert",
+                "message": "Soil is waterlogged. Pause irrigation."
+            })
 
-    if sensor.ph < 5.5:
-        alerts.append({
-            "type": "Soil pH Alert",
-            "message": "Soil pH is below recommended range."
-        })
+    if settings.notify_soil_quality:
+        if sensor.ph < 5.5:
+            alerts.append({
+                "type": "Soil pH Alert",
+                "message": "Soil pH is below recommended range."
+            })
 
-    elif sensor.ph > 7.5:
-        alerts.append({
-            "type": "Soil pH Alert",
-            "message": "Soil pH is above recommended range."
-        })
+        elif sensor.ph > 7.5:
+            alerts.append({
+                "type": "Soil pH Alert",
+                "message": "Soil pH is above recommended range."
+            })
 
-    if sensor.nitrogen < 40:
-        alerts.append({
-            "type": "Nutrient Alert",
-            "message": "Nitrogen level is low."
-        })
+        if sensor.ec is not None and sensor.ec > 3.0:
+            alerts.append({
+                "type": "Salinity Alert",
+                "message": "Electrical conductivity is high. Salinity risk."
+            })
 
-    if sensor.phosphorus < 25:
-        alerts.append({
-            "type": "Nutrient Alert",
-            "message": "Phosphorus level is low."
-        })
+    if settings.notify_fertilization:
+        if sensor.nitrogen < 40:
+            alerts.append({
+                "type": "Nutrient Alert",
+                "message": "Nitrogen level is low."
+            })
 
-    if sensor.potassium < 35:
-        alerts.append({
-            "type": "Nutrient Alert",
-            "message": "Potassium level is low."
-        })
+        if sensor.phosphorus < 25:
+            alerts.append({
+                "type": "Nutrient Alert",
+                "message": "Phosphorus level is low."
+            })
 
-    if sensor.ec is not None and sensor.ec > 3.0:
-        alerts.append({
-            "type": "Salinity Alert",
-            "message": "Electrical conductivity is high. Salinity risk."
-        })
+        if sensor.potassium < 35:
+            alerts.append({
+                "type": "Nutrient Alert",
+                "message": "Potassium level is low."
+            })
 
     return alerts
 

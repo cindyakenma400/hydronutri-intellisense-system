@@ -30,6 +30,8 @@ class DiseaseDetection(Base):
 
     image_source = Column(String)
 
+    image_filename = Column(String, nullable=True)
+
     created_at = Column(
         DateTime,
         default=datetime.utcnow

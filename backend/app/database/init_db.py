@@ -13,6 +13,7 @@ from app.models.recommendation import Recommendation
 from app.models.disease import DiseaseDetection
 from app.models.control import SystemControl
 from app.models.user import User
+from app.models.settings import SystemSettings
 
 
 def _add_column(table, column, definition):
