@@ -1,7 +1,16 @@
 "use client";
 
 import { Card, Field, SaveBar, Toggle } from "../ui";
-import { Settings } from "../settingsTypes";
+import { CropType, Settings } from "../settingsTypes";
+
+const CROP_OPTIONS: CropType[] = ["Tomato", "Onion", "Maize"];
+
+// Crop-specific NPK optimal ranges (matching backend thresholds.py)
+const CROP_NPK_RANGES: Record<CropType, { n: string; p: string; k: string }> = {
+  Tomato: { n: "60 – 120", p: "40 – 80", k: "60 – 120" },
+  Onion:  { n: "50 – 100", p: "35 – 70", k: "50 – 110" },
+  Maize:  { n: "70 – 140", p: "30 – 70", k: "45 – 100" },
+};
 
 type Props = {
   settings: Settings;
@@ -17,15 +26,18 @@ export function IrrigationSection({ settings, update, persist }: Props) {
     >
       <Toggle
         label="Automatic irrigation"
-        description="Runs the pump when moisture drops below the trigger"
+        description="Runs the pump when moisture drops below the trigger and stops when it reaches the stop point"
         checked={settings.autoIrrigation}
         onChange={(v) => update("autoIrrigation", v)}
       />
-      <div className="mt-4 grid gap-4 sm:grid-cols-2">
-        <Field label="Moisture trigger (%)" type="number"
+      <div className="mt-4 grid gap-4 sm:grid-cols-3">
+        <Field label="Pump ON below (%)" type="number"
           value={String(settings.moistureTrigger)}
           onChange={(v) => update("moistureTrigger", Number(v))} />
-        <Field label="Maximum pump runtime (minutes)" type="number"
+        <Field label="Pump OFF at (%)" type="number"
+          value={String(settings.moistureStop)}
+          onChange={(v) => update("moistureStop", Number(v))} />
+        <Field label="Max runtime (minutes)" type="number"
           value={String(settings.maxPumpMinutes)}
           onChange={(v) => update("maxPumpMinutes", Number(v))} />
       </div>
@@ -35,25 +47,59 @@ export function IrrigationSection({ settings, update, persist }: Props) {
 }
 
 export function FertilizationSection({ settings, update, persist }: Props) {
+  const crop = settings.currentCrop || "Tomato";
+  const ranges = CROP_NPK_RANGES[crop];
+
   return (
     <Card
       title="Automatic Fertilization"
-      subtitle="Controls when the nutrient pump doses fertilizer"
+      subtitle="Controls when the nutrient pump doses fertilizer based on crop-specific thresholds"
     >
       <Toggle
         label="Automatic fertilization"
-        description="Doses nutrients when NPK levels fall below the trigger"
+        description="Doses nutrients when NPK levels fall below the optimal range for the selected crop"
         checked={settings.autoFertilization}
         onChange={(v) => update("autoFertilization", v)}
       />
+
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
-        <Field label="NPK trigger (mg/kg)" type="number"
-          value={String(settings.npkTrigger)}
-          onChange={(v) => update("npkTrigger", Number(v))} />
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Current crop
+          </label>
+          <select
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:ring-1 focus:ring-green-500"
+            value={crop}
+            onChange={(e) => update("currentCrop", e.target.value as CropType)}
+          >
+            {CROP_OPTIONS.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+          <p className="text-xs text-gray-400 mt-1">
+            Set this after running a soil suitability assessment
+          </p>
+        </div>
         <Field label="Dosing duration (seconds)" type="number"
           value={String(settings.fertilizerDurationSeconds)}
           onChange={(v) => update("fertilizerDurationSeconds", Number(v))} />
       </div>
+
+      <div className="mt-4 rounded-lg bg-gray-50 p-4">
+        <p className="text-sm font-medium text-gray-700 mb-2">
+          NPK thresholds for {crop} (mg/kg)
+        </p>
+        <div className="grid grid-cols-3 gap-3 text-sm text-gray-600">
+          <div><span className="font-medium">N:</span> {ranges.n}</div>
+          <div><span className="font-medium">P:</span> {ranges.p}</div>
+          <div><span className="font-medium">K:</span> {ranges.k}</div>
+        </div>
+        <p className="text-xs text-gray-400 mt-2">
+          The valve opens when any nutrient falls below the lower value
+          and closes when all reach the upper value.
+        </p>
+      </div>
+
       <SaveBar onSave={() => persist()} />
     </Card>
   );

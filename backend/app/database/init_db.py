@@ -59,9 +59,13 @@ def _add_missing_columns():
     _add_column("system_controls", "pump_started_at", "DATETIME")
     _add_column("system_controls", "pump_stopped_at", "DATETIME")
 
-    # Fertilizer dose length and rest period.
+    # Fertilizer valve timing.
     _add_column("system_controls", "valve_started_at", "DATETIME")
     _add_column("system_controls", "valve_stopped_at", "DATETIME")
+
+    # Current crop selection and moisture stop point.
+    _add_column("system_settings", "current_crop", "VARCHAR DEFAULT 'Tomato'")
+    _add_column("system_settings", "moisture_stop", "FLOAT DEFAULT 80.0")
 
 
 def init_db():

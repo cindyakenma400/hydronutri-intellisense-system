@@ -4,8 +4,9 @@ interface PumpStatusCardProps {
   pumpOn?: boolean;
 }
 
-// pumpOn is the backend's pump state, the same value the ESP32 switches
-// the relay from, so this card always shows what the pump is doing.
+// pumpOn is the backend's actual pump state — the same value the ESP32
+// uses to switch the relay, so this card always shows what the pump
+// is really doing.
 export default function PumpStatusCard({
   irrigationStatus = "Unknown",
   autoMode = true,

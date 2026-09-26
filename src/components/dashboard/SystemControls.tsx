@@ -101,11 +101,10 @@ export default function SystemControl() {
       {error && <p className="text-sm text-red-600 mt-4">{error}</p>}
 
       <p className="text-xs text-gray-400 mt-4">
-        Auto mode runs the pump from soil moisture and doses fertilizer when
-        N, P or K falls below the NPK trigger, using the limits in Settings.
-        Switching the pump by hand turns auto mode off. The fertilizer valve
-        always closes after the dose duration. The ESP32 polls this state to
-        switch the physical relays.
+        Auto mode activates the pump when moisture drops below 45% and stops
+        it at 80%. It also doses fertilizer when NPK falls below the
+        crop-specific thresholds and stops when levels are optimal. Switching
+        the pump by hand turns auto mode off.
       </p>
     </div>
   );

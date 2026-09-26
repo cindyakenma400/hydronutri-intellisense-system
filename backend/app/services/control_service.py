@@ -4,11 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.models.control import SystemControl
 from app.models.settings import SystemSettings
-
-# Auto mode switches the pump off once moisture climbs this many
-# points above the trigger, so it does not flicker on and off
-# around a single value.
-MOISTURE_HYSTERESIS = 10.0
+from app.utils.thresholds import CROP_THRESHOLDS
 
 # After a stop, auto mode waits this long before starting the pump
 # again, so a sensor stuck at a low value cannot run it back to back.
@@ -111,7 +107,7 @@ def enforce_pump_cutoff(db: Session) -> SystemControl:
         state.valve_started_at = now
         changed = True
 
-    if state.pump_on:
+    if state.pump_on and state.pump_started_at is not None:
         settings = _get_settings(db)
         limit = timedelta(minutes=settings.max_pump_minutes or 15)
 
@@ -119,7 +115,7 @@ def enforce_pump_cutoff(db: Session) -> SystemControl:
             _switch_pump(state, False)
             changed = True
 
-    if state.valve_on:
+    if state.valve_on and state.valve_started_at is not None:
         settings = _get_settings(db)
         limit = timedelta(seconds=settings.fertilizer_duration_seconds or 30)
 
@@ -174,9 +170,9 @@ def set_auto_mode(db: Session, on: bool | None) -> SystemControl:
 def apply_auto_irrigation(db: Session, reading) -> SystemControl:
     """
     Runs after every sensor upload. With auto mode on (dashboard) and
-    automatic irrigation enabled (Settings), starts the pump when soil
-    moisture falls below the trigger and stops it once moisture is back
-    above trigger + MOISTURE_HYSTERESIS.
+    automatic irrigation enabled (Settings):
+      - Starts the pump when soil moisture drops below moisture_trigger (45%)
+      - Stops the pump when soil moisture reaches moisture_stop (80%)
     """
     state = get_state(db)
 
@@ -191,8 +187,9 @@ def apply_auto_irrigation(db: Session, reading) -> SystemControl:
     if _is_sensor_frame_empty(reading):
         return state
 
-    trigger = settings.moisture_trigger
     moisture = reading.soil_moisture
+    trigger = settings.moisture_trigger   # default 45%
+    stop = settings.moisture_stop         # default 80%
 
     if not state.pump_on and moisture < trigger:
         rested = state.pump_stopped_at is None or (
@@ -202,7 +199,7 @@ def apply_auto_irrigation(db: Session, reading) -> SystemControl:
         if rested:
             _switch_pump(state, True)
 
-    elif state.pump_on and moisture >= trigger + MOISTURE_HYSTERESIS:
+    elif state.pump_on and moisture >= stop:
         _switch_pump(state, False)
 
     db.commit()
@@ -214,14 +211,21 @@ def apply_auto_fertilization(db: Session, reading) -> SystemControl:
     """
     Runs after every sensor upload. With auto mode on (dashboard) and
     automatic fertilization enabled (Settings), opens the fertilizer
-    valve when nitrogen, phosphorus or potassium is below the NPK
-    trigger. enforce_pump_cutoff() closes it again after the dose
-    duration, and FERTILIZER_REST_MINUTES must pass before the next
-    dose.
+    valve when nitrogen, phosphorus, or potassium is below the
+    crop-specific optimal low threshold. Closes the valve when all
+    three are at or above the crop-specific optimal high threshold,
+    so the soil is never over-saturated.
+
+    The crop thresholds come from thresholds.py and depend on the
+    current_crop setting (Tomato, Onion, or Maize).
+
+    enforce_pump_cutoff() also closes the valve after the dose
+    duration from Settings as a safety limit, and
+    FERTILIZER_REST_MINUTES must pass before the next dose.
     """
     state = get_state(db)
 
-    if not state.auto_mode or state.valve_on:
+    if not state.auto_mode:
         return state
 
     settings = _get_settings(db)
@@ -232,20 +236,39 @@ def apply_auto_fertilization(db: Session, reading) -> SystemControl:
     if _is_sensor_frame_empty(reading):
         return state
 
-    trigger = settings.npk_trigger
-    deficient = min(
-        reading.nitrogen,
-        reading.phosphorus,
-        reading.potassium,
-    ) < trigger
+    # Get the crop-specific NPK thresholds
+    crop = settings.current_crop or "Tomato"
+    thresholds = CROP_THRESHOLDS.get(crop)
 
-    rested = state.valve_stopped_at is None or (
-        datetime.utcnow() - state.valve_stopped_at
-        >= timedelta(minutes=FERTILIZER_REST_MINUTES)
-    )
+    if thresholds is None:
+        return state
 
-    if deficient and rested:
-        _switch_valve(state, True)
+    _, n_low, n_high, _ = thresholds["n"]
+    _, p_low, p_high, _ = thresholds["p"]
+    _, k_low, k_high, _ = thresholds["k"]
+
+    n = reading.nitrogen
+    p = reading.phosphorus
+    k = reading.potassium
+
+    # Any nutrient below its optimal low -> need to dose
+    deficient = n < n_low or p < p_low or k < k_low
+
+    # All nutrients at or above their optimal high -> stop dosing
+    sufficient = n >= n_high and p >= p_high and k >= k_high
+
+    if not state.valve_on and deficient:
+        rested = state.valve_stopped_at is None or (
+            datetime.utcnow() - state.valve_stopped_at
+            >= timedelta(minutes=FERTILIZER_REST_MINUTES)
+        )
+        if rested:
+            _switch_valve(state, True)
+            db.commit()
+            db.refresh(state)
+
+    elif state.valve_on and sufficient:
+        _switch_valve(state, False)
         db.commit()
         db.refresh(state)
 

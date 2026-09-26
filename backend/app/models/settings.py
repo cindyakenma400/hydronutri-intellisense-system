@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, Float, Boolean
+from sqlalchemy import Column, Integer, Float, Boolean, String
 
 from app.database.database import Base
 
@@ -12,12 +12,17 @@ class SystemSettings(Base):
 
     id = Column(Integer, primary_key=True, index=True)
 
+    # The crop currently planted. The fertilizer valve uses this crop's
+    # NPK thresholds from thresholds.py to decide when to dose and stop.
+    # Set after running a soil suitability assessment.
+    current_crop = Column(String, default="Tomato")
+
     auto_irrigation = Column(Boolean, default=True)
-    moisture_trigger = Column(Float, default=30.0)
+    moisture_trigger = Column(Float, default=45.0)
+    moisture_stop = Column(Float, default=80.0)
     max_pump_minutes = Column(Integer, default=15)
 
     auto_fertilization = Column(Boolean, default=True)
-    npk_trigger = Column(Float, default=40.0)
     fertilizer_duration_seconds = Column(Integer, default=30)
 
     soil_quality_assessment = Column(Boolean, default=True)

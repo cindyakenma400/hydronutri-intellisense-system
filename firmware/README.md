@@ -41,7 +41,7 @@ Open the Serial Monitor and press OFF on the dashboard.
 
 ## Automatic fertilization
 
-With Auto Mode on and "Automatic fertilization" enabled in Settings, the backend opens the fertilizer valve when nitrogen, phosphorus or potassium drops below the NPK trigger. The valve closes after the dose duration from Settings (manual doses too), and the next automatic dose waits at least 60 minutes so the nutrients can reach the probe.
+With Auto Mode on and "Automatic fertilization" enabled in Settings, the backend opens the fertilizer valve when nitrogen, phosphorus or potassium drops below the crop-specific optimal range (set by "Current crop" in Settings). The valve closes when all NPK values reach the optimal high, or after the dose duration — whichever comes first. The next automatic dose waits at least 60 minutes so the nutrients can reach the probe.
 
 ## Safety behaviour
 

@@ -12,12 +12,14 @@ router = APIRouter(
 
 
 class SettingsUpdateRequest(BaseModel):
+    current_crop: str | None = None
+
     auto_irrigation: bool | None = None
     moisture_trigger: float | None = None
+    moisture_stop: float | None = None
     max_pump_minutes: int | None = None
 
     auto_fertilization: bool | None = None
-    npk_trigger: float | None = None
     fertilizer_duration_seconds: int | None = None
 
     soil_quality_assessment: bool | None = None
@@ -51,11 +53,12 @@ def _get_or_create(db: Session) -> SystemSettings:
 
 def _serialize(settings: SystemSettings):
     return {
+        "current_crop": settings.current_crop,
         "auto_irrigation": settings.auto_irrigation,
         "moisture_trigger": settings.moisture_trigger,
+        "moisture_stop": settings.moisture_stop,
         "max_pump_minutes": settings.max_pump_minutes,
         "auto_fertilization": settings.auto_fertilization,
-        "npk_trigger": settings.npk_trigger,
         "fertilizer_duration_seconds": settings.fertilizer_duration_seconds,
         "soil_quality_assessment": settings.soil_quality_assessment,
         "assessment_frequency_hours": settings.assessment_frequency_hours,

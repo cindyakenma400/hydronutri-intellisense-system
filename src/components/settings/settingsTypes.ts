@@ -25,12 +25,16 @@ export type Settings = {
   email: string;
   phone: string;
 
+  // The crop currently planted — determines the NPK thresholds
+  // the fertilizer valve uses to start and stop dosing.
+  currentCrop: CropType;
+
   autoIrrigation: boolean;
   moistureTrigger: number;
+  moistureStop: number;
   maxPumpMinutes: number;
 
   autoFertilization: boolean;
-  npkTrigger: number;
   fertilizerDurationSeconds: number;
 
   soilQualityAssessment: boolean;
@@ -58,12 +62,14 @@ export const DEFAULTS: Settings = {
   email: "",
   phone: "",
 
+  currentCrop: "Tomato",
+
   autoIrrigation: true,
-  moistureTrigger: 30,
+  moistureTrigger: 45,
+  moistureStop: 80,
   maxPumpMinutes: 15,
 
   autoFertilization: true,
-  npkTrigger: 40,
   fertilizerDurationSeconds: 30,
 
   soilQualityAssessment: true,

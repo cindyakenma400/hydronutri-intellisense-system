@@ -36,17 +36,20 @@ def get_irrigation_status(soil_moisture):
             "message": "Automatic irrigation is disabled"
         }
 
-    if soil_moisture < settings.moisture_trigger:
+    trigger = settings.moisture_trigger   # default 45%
+    stop = settings.moisture_stop if hasattr(settings, 'moisture_stop') and settings.moisture_stop else 80.0
+
+    if soil_moisture < trigger:
         return {
             "irrigation_needed": True,
             "water_amount_liters": 15.0,
             "message": "Irrigation Required"
         }
 
-    elif soil_moisture < 60:
+    elif soil_moisture < stop:
         return {
-            "irrigation_needed": True,
-            "water_amount_liters": 5.0,
+            "irrigation_needed": False,
+            "water_amount_liters": 0.0,
             "message": "Monitor Moisture Level"
         }
 

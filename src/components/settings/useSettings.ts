@@ -8,11 +8,12 @@ import { DEFAULTS, STORAGE_KEY, Settings } from "./settingsTypes";
 // The subset of Settings that is persisted in the backend's
 // system_settings table (farm/profile fields stay local-only).
 type BackendSettings = {
+  current_crop: string;
   auto_irrigation: boolean;
   moisture_trigger: number;
+  moisture_stop: number;
   max_pump_minutes: number;
   auto_fertilization: boolean;
-  npk_trigger: number;
   fertilizer_duration_seconds: number;
   soil_quality_assessment: boolean;
   assessment_frequency_hours: number;
@@ -30,11 +31,12 @@ type BackendSettings = {
 
 function toBackend(settings: Settings): BackendSettings {
   return {
+    current_crop: settings.currentCrop,
     auto_irrigation: settings.autoIrrigation,
     moisture_trigger: settings.moistureTrigger,
+    moisture_stop: settings.moistureStop,
     max_pump_minutes: settings.maxPumpMinutes,
     auto_fertilization: settings.autoFertilization,
-    npk_trigger: settings.npkTrigger,
     fertilizer_duration_seconds: settings.fertilizerDurationSeconds,
     soil_quality_assessment: settings.soilQualityAssessment,
     assessment_frequency_hours: settings.assessmentFrequencyHours,
@@ -54,11 +56,12 @@ function toBackend(settings: Settings): BackendSettings {
 function fromBackend(current: Settings, backend: BackendSettings): Settings {
   return {
     ...current,
+    currentCrop: backend.current_crop as Settings["currentCrop"],
     autoIrrigation: backend.auto_irrigation,
     moistureTrigger: backend.moisture_trigger,
+    moistureStop: backend.moisture_stop,
     maxPumpMinutes: backend.max_pump_minutes,
     autoFertilization: backend.auto_fertilization,
-    npkTrigger: backend.npk_trigger,
     fertilizerDurationSeconds: backend.fertilizer_duration_seconds,
     soilQualityAssessment: backend.soil_quality_assessment,
     assessmentFrequencyHours: backend.assessment_frequency_hours,
