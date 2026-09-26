@@ -1,8 +1,16 @@
 // Central API client for the FastAPI backend.
 // All frontend requests go through this file.
 
-export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
+// With no NEXT_PUBLIC_API_URL set, the backend is assumed to run on the
+// same machine that serves the page. Using the page's own hostname keeps
+// that working from a phone on the local network, where 127.0.0.1 would
+// point at the phone itself.
+function defaultApiUrl(): string {
+  if (typeof window === "undefined") return "http://127.0.0.1:8000";
+  return `${window.location.protocol}//${window.location.hostname}:8000`;
+}
+
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? defaultApiUrl();
 
 export class ApiError extends Error {
   status: number;

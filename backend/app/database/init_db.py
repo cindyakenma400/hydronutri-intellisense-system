@@ -52,6 +52,13 @@ def _add_missing_columns():
     _add_column("alerts", "is_read", "BOOLEAN DEFAULT 0")
     _add_column("alerts", "is_active", "BOOLEAN DEFAULT 1")
 
+    # Stored leaf photo, shown in the disease history table.
+    _add_column("disease_detections", "image_filename", "VARCHAR")
+
+    # Pump runtime cutoff and rest period.
+    _add_column("system_controls", "pump_started_at", "DATETIME")
+    _add_column("system_controls", "pump_stopped_at", "DATETIME")
+
 
 def init_db():
     Base.metadata.create_all(bind=engine)

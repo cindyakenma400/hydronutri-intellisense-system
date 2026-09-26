@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { apiGet, apiPost } from "@/lib/api";
+import { ApiError, apiGet, apiPostJson } from "@/lib/api";
 
 interface ControlState {
   pump_on: boolean;
@@ -13,6 +13,7 @@ interface ControlState {
 export default function SystemControl() {
   const [state, setState] = useState<ControlState | null>(null);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const busyRef = useRef(false);
 
   function setBusyState(value: boolean) {
@@ -38,13 +39,20 @@ export default function SystemControl() {
     return () => clearInterval(timer);
   }, []);
 
-  async function toggle(path: string) {
+  // Sends the target state rather than "toggle", so a double click or a
+  // retried request cannot flip the pump back to where it started.
+  async function setSwitch(path: string, on: boolean) {
     setBusyState(true);
+    setError(null);
     try {
-      const updated = await apiPost<ControlState>(path);
+      const updated = await apiPostJson<ControlState>(path, { on });
       setState(updated);
-    } catch {
-      // backend not reachable; keep current state
+    } catch (err) {
+      setError(
+        err instanceof ApiError && err.status === 401
+          ? "Your session has expired. Log in again to use the controls."
+          : "Could not reach the controller. Check that the backend is running."
+      );
     } finally {
       setBusyState(false);
     }
@@ -60,9 +68,9 @@ export default function SystemControl() {
 
       <div className="space-y-4 mt-4">
         <button
-          onClick={() => toggle("/controls/pump")}
+          onClick={() => setSwitch("/controls/pump", !pumpOn)}
           disabled={busy}
-          className={`w-full py-2 rounded-lg text-white transition disabled:opacity-50 ${
+          className={`w-full py-2 rounded-lg text-white transition duration-300 disabled:opacity-50 ${
             pumpOn ? "bg-green-600" : "bg-gray-400"
           }`}
         >
@@ -70,9 +78,9 @@ export default function SystemControl() {
         </button>
 
         <button
-          onClick={() => toggle("/controls/valve")}
+          onClick={() => setSwitch("/controls/valve", !valveOn)}
           disabled={busy}
-          className={`w-full py-2 rounded-lg text-white transition disabled:opacity-50 ${
+          className={`w-full py-2 rounded-lg text-white transition duration-300 disabled:opacity-50 ${
             valveOn ? "bg-blue-600" : "bg-gray-400"
           }`}
         >
@@ -80,9 +88,9 @@ export default function SystemControl() {
         </button>
 
         <button
-          onClick={() => toggle("/controls/auto")}
+          onClick={() => setSwitch("/controls/auto", !autoOn)}
           disabled={busy}
-          className={`w-full py-2 rounded-lg text-white transition disabled:opacity-50 ${
+          className={`w-full py-2 rounded-lg text-white transition duration-300 disabled:opacity-50 ${
             autoOn ? "bg-gray-800" : "bg-gray-400"
           }`}
         >
@@ -90,10 +98,12 @@ export default function SystemControl() {
         </button>
       </div>
 
+      {error && <p className="text-sm text-red-600 mt-4">{error}</p>}
+
       <p className="text-xs text-gray-400 mt-4">
-        Manual pump and valve controls always take effect. Auto mode runs
-        the pump from soil moisture when you have not overridden it. The
-        ESP32 polls this state to switch the physical relays.
+        Auto mode runs the pump from soil moisture, using the trigger and
+        maximum runtime in Settings. Switching the pump by hand turns auto
+        mode off. The ESP32 polls this state to switch the physical relays.
       </p>
     </div>
   );

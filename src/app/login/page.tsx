@@ -82,7 +82,7 @@ export default function LoginPage() {
 
         <div className="bg-white rounded-2xl shadow-xl p-8">
           {mode === "forgot" ? (
-            <>
+            <div key="forgot" className="animate-page-in">
               <h2 className="text-lg font-semibold text-gray-800 mb-1">
                 Reset your password
               </h2>
@@ -133,9 +133,9 @@ export default function LoginPage() {
                   Back to Sign In
                 </button>
               </div>
-            </>
+            </div>
           ) : (
-            <>
+            <div key="auth" className="animate-page-in">
               <div className="flex rounded-lg bg-gray-100 p-1 mb-6">
                 <button
                   onClick={() => {
@@ -168,7 +168,7 @@ export default function LoginPage() {
 
               <div className="space-y-4">
                 {mode === "register" && (
-                  <>
+                  <div className="space-y-4 animate-page-in">
                     <div>
                       <label className="block text-sm text-gray-600 mb-1">
                         Full Name
@@ -192,7 +192,7 @@ export default function LoginPage() {
                         className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
                       />
                     </div>
-                  </>
+                  </div>
                 )}
 
                 <div>
@@ -260,7 +260,7 @@ export default function LoginPage() {
                     : "Create Account"}
                 </button>
               </div>
-            </>
+            </div>
           )}
         </div>
 

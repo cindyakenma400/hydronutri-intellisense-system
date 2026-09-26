@@ -11,6 +11,7 @@ import {
 } from "recharts";
 
 import { SensorReading } from "@/types/sensor";
+import { useChartLayout } from "@/hooks/useChartLayout";
 
 interface ChartProps {
   history: SensorReading[];
@@ -19,6 +20,8 @@ interface ChartProps {
 export default function PHChart({
   history,
 }: ChartProps) {
+  const { yAxisWidth, margin } = useChartLayout();
+
   const data = [...history]
     .reverse()
     .slice(-30)
@@ -28,17 +31,17 @@ export default function PHChart({
     }));
 
   return (
-    <div className="bg-white rounded-xl shadow p-6">
+    <div className="bg-white rounded-xl shadow p-4 sm:p-6">
       <h2 className="text-lg font-semibold mb-4">
         Soil pH Trend
       </h2>
 
       <div className="h-64">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data}>
+          <LineChart data={data} margin={margin}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="time" tick={{ fontSize: 11 }} />
-            <YAxis domain={[4, 9]} />
+            <YAxis domain={[4, 9]} width={yAxisWidth} tick={{ fontSize: 11 }} />
             <Tooltip />
             <Line
               type="monotone"

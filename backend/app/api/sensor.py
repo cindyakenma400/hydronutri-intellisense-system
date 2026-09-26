@@ -4,7 +4,8 @@ from fastapi import HTTPException
 
 from sqlalchemy.orm import Session
 
-from app.database.dependencies import get_db
+from app.database.dependencies import get_db, require_device
+from app.services.control_service import apply_auto_irrigation
 
 from app.schemas.sensor_schema import (
     SensorCreate,
@@ -25,17 +26,23 @@ router = APIRouter(
 
 @router.post(
     "/upload",
-    response_model=SensorResponse
+    response_model=SensorResponse,
+    dependencies=[Depends(require_device)]
 )
 def upload_sensor_data(
     sensor_data: SensorCreate,
     db: Session = Depends(get_db)
 ):
 
-    return create_sensor_reading(
+    reading = create_sensor_reading(
         db,
         sensor_data
     )
+
+    # Auto mode decides the pump state from each new reading.
+    apply_auto_irrigation(db, reading)
+
+    return reading
 
 
 @router.get(

@@ -94,7 +94,7 @@ export default function DiseaseDetectionPage() {
       <div className="grid lg:grid-cols-2 gap-6">
         <DiseaseImageViewer imageUrl={imageUrl} />
         <DiseaseResultCard
-          disease={result?.disease_detected ?? "—"}
+          disease={result?.disease_detected ?? "Not analyzed yet"}
           confidence={result?.confidence ?? 0}
           treatment={
             result

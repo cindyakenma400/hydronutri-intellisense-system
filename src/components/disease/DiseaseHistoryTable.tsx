@@ -4,7 +4,26 @@ import { useState } from "react";
 import { Camera, X } from "lucide-react";
 
 import { DiseaseHistoryItem } from "@/types/disease";
-import { formatDate } from "@/utils/formatDate";
+import { API_BASE_URL } from "@/lib/api";
+import DateTimeCell from "@/components/shared/DateTimeCell";
+
+// Full labels on larger screens, short ones on phones so every column
+// fits the screen at once. On phones Crop is shown above the disease and
+// Confidence under the severity, so those two columns are hidden there.
+const COLUMNS = [
+  { label: "Image", short: "Leaf" },
+  { label: "Date", short: "Date" },
+  { label: "Crop", short: "", phoneHidden: true },
+  { label: "Disease", short: "Crop / Disease" },
+  { label: "Confidence", short: "", phoneHidden: true },
+  { label: "Severity", short: "Sev. / Conf." },
+  { label: "Source", short: "Src" },
+];
+
+const PHONE_HIDDEN = "hidden sm:table-cell";
+
+// Cells are tight on phones and roomy from sm up.
+const CELL = "text-left px-1 py-2 sm:px-2 sm:py-3";
 
 interface DiseaseHistoryTableProps {
   items: DiseaseHistoryItem[];
@@ -16,7 +35,7 @@ export default function DiseaseHistoryTable({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   return (
-    <div className="bg-white rounded-xl shadow p-6">
+    <div className="bg-white rounded-xl shadow p-4 sm:p-6">
       <h2 className="text-lg font-semibold mb-4">
         Disease Detection History
       </h2>
@@ -27,65 +46,72 @@ export default function DiseaseHistoryTable({
           first record.
         </p>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full">
+        // On phones the table uses the card's side padding too.
+        <div className="-mx-2 sm:mx-0 overflow-x-auto">
+          <table className="w-full text-[11px] sm:text-sm md:text-base">
             <thead>
               <tr className="border-b">
-                <th className="text-left py-2">Image</th>
-                <th className="text-left py-2">Date</th>
-                <th className="text-left py-2">Crop</th>
-                <th className="text-left py-2">Disease</th>
-                <th className="text-left py-2">Confidence</th>
-                <th className="text-left py-2">Severity</th>
-                <th className="text-left py-2">Source</th>
+                {COLUMNS.map(({ label, short, phoneHidden }) => (
+                  <th
+                    key={label}
+                    className={`${CELL} align-bottom font-semibold ${phoneHidden ? PHONE_HIDDEN : ""}`}
+                  >
+                    <span className="sm:hidden">{short}</span>
+                    <span className="hidden sm:inline">{label}</span>
+                  </th>
+                ))}
               </tr>
             </thead>
 
             <tbody>
               {items.map((item) => (
                 <tr key={item.id} className="border-b">
-                  <td className="py-3">
+                  <td className={CELL}>
                     {item.image_url ? (
                       <button
                         type="button"
                         onClick={() =>
-                          setPreviewUrl(`http://localhost:8000${item.image_url}`)
+                          setPreviewUrl(`${API_BASE_URL}${item.image_url}`)
                         }
-                        className="block w-12 h-12 rounded overflow-hidden"
+                        className="block w-8 h-8 sm:w-12 sm:h-12 rounded overflow-hidden"
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
-                          src={`http://localhost:8000${item.image_url}`}
+                          src={`${API_BASE_URL}${item.image_url}`}
                           alt={`${item.crop} leaf`}
-                          className="w-12 h-12 object-cover rounded"
+                          className="w-8 h-8 sm:w-12 sm:h-12 object-cover rounded"
                         />
                       </button>
                     ) : (
-                      <div className="w-12 h-12 rounded bg-gray-100 flex items-center justify-center">
+                      <div className="w-8 h-8 sm:w-12 sm:h-12 rounded bg-gray-100 flex items-center justify-center">
                         <Camera className="w-5 h-5 text-gray-400" />
                       </div>
                     )}
                   </td>
 
-                  <td className="py-3">
-                    {formatDate(item.created_at)}
+                  <td className={CELL}>
+                    <DateTimeCell iso={item.created_at} />
                   </td>
 
-                  <td className="py-3">{item.crop}</td>
+                  <td className={`${CELL} ${PHONE_HIDDEN}`}>{item.crop}</td>
 
-                  <td className="py-3">
+                  <td className={CELL}>
+                    <span className="sm:hidden block text-gray-500">{item.crop}</span>
                     {item.disease_detected}
                   </td>
 
-                  <td className="py-3">
+                  <td className={`${CELL} ${PHONE_HIDDEN}`}>
                     {item.confidence}%
                   </td>
 
-                  <td className="py-3">
+                  <td className={CELL}>
                     {item.severity}
+                    <span className="sm:hidden block text-gray-500">{item.confidence}%</span>
                   </td>
 
-                  <td className="py-3 text-sm text-gray-500">
+                  {/* Wraps by words ("Web Upload" / "(leaf.jpg)"), never
+                      letter by letter. */}
+                  <td className={`${CELL} text-gray-500 min-w-16 sm:min-w-0`}>
                     {item.image_source}
                   </td>
                 </tr>

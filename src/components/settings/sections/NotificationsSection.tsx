@@ -28,7 +28,7 @@ export default function NotificationsSection({
           onChange={(v) => update("notifyEmail", v)} />
       </div>
 
-      <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mt-5 mb-1">
+      <p className="text-xs font-semibold uppercase text-gray-400 mt-5 mb-1">
         Alert types
       </p>
       <div className="divide-y">

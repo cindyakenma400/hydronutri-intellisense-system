@@ -3,7 +3,11 @@ ESP32 Sensor Simulator
 ----------------------
 Sends realistic, gradually drifting soil sensor readings to the
 HydroNutri IntelliSense backend, exactly the way the real ESP32
-firmware will (JSON over HTTP POST to /sensor/upload).
+firmware does (JSON over HTTP POST to /sensor/upload).
+
+Like the firmware, it also polls /controls/status and obeys it: while
+the pump is ON, simulated soil moisture rises, so auto mode can be
+watched switching the pump on and off with no hardware attached.
 
 Each reading is sent on a BRAND NEW connection. Reusing a
 requests.Session keeps a socket alive between sends, and on Windows
@@ -15,10 +19,12 @@ Usage:
     python simulate_esp32.py                  # one reading every 5 s
     python simulate_esp32.py --scenario dry   # low moisture, for demos
     python simulate_esp32.py --url http://192.168.1.50:8000
+    python simulate_esp32.py --device-key SECRET   # if DEVICE_API_KEY is set
 Scenarios: normal | dry | acidic
 """
 
 import argparse
+import os
 import random
 import sys
 import time
@@ -82,12 +88,20 @@ SCENARIOS = {
 
 DECIMALS = {"ph": 2, "ec": 2}
 
+# Moisture gained per cycle while the pump runs.
+PUMP_WATERING_RATE = 3.0
 
-def drift(state):
-    """Nudges every field a little, keeping it inside its range."""
+
+def drift(state, pump_on=False):
+    """
+    Nudges every field a little, keeping it inside its range. Soil dries
+    slowly on its own and gets wetter while the pump runs.
+    """
     for field, step in DRIFT.items():
         low, high = RANGES[field]
         moved = state[field] + random.uniform(-step, step)
+        if field == "soil_moisture":
+            moved += PUMP_WATERING_RATE if pump_on else -0.5
         state[field] = max(low, min(high, moved))
     return state
 
@@ -99,7 +113,19 @@ def build_payload(state):
     }
 
 
-def send(url, payload):
+def fetch_controls(url, headers):
+    """Reads the pump and valve state the dashboard / auto mode set."""
+    try:
+        response = requests.get(url, timeout=10, proxies=NO_PROXY,
+                                headers=headers)
+        if response.status_code == 200:
+            return response.json()
+    except Exception:
+        pass
+    return None
+
+
+def send(url, payload, headers):
     """
     One reading, one connection.
 
@@ -112,7 +138,7 @@ def send(url, payload):
         json=payload,
         timeout=10,
         proxies=NO_PROXY,
-        headers={"Connection": "close"},
+        headers={"Connection": "close", **headers},
     )
 
 
@@ -123,9 +149,17 @@ def main():
                         help="soil condition to simulate (default normal)")
     parser.add_argument("--url", default=DEFAULT_URL,
                         help="backend base URL (default %(default)s)")
+    parser.add_argument("--device-key",
+                        default=os.getenv("DEVICE_API_KEY", ""),
+                        help="value for X-Device-Key, if the backend "
+                             "sets DEVICE_API_KEY")
     args = parser.parse_args()
 
     endpoint = args.url.rstrip("/") + "/sensor/upload"
+    controls_url = args.url.rstrip("/") + "/controls/status"
+    headers = {"X-Device-Key": args.device_key} if args.device_key else {}
+    pump_on = False
+    valve_on = False
     state = dict(SCENARIOS[args.scenario])
 
     print("=" * 58)
@@ -146,7 +180,7 @@ def main():
             payload = build_payload(state)
 
             try:
-                response = send(endpoint, payload)
+                response = send(endpoint, payload, headers)
 
                 if response.status_code == 200:
                     failures = 0
@@ -170,7 +204,17 @@ def main():
                 print("    uvicorn app.main:app --reload")
                 sys.exit(1)
 
-            state = drift(state)
+            controls = fetch_controls(controls_url, headers)
+            if controls is not None:
+                if controls["pump_on"] != pump_on:
+                    print(f"       Pump  {'ON' if controls['pump_on'] else 'OFF'}"
+                          f"  (auto mode {'on' if controls['auto_mode'] else 'off'})")
+                if controls["valve_on"] != valve_on:
+                    print(f"       Valve {'ON' if controls['valve_on'] else 'OFF'}")
+                pump_on = controls["pump_on"]
+                valve_on = controls["valve_on"]
+
+            state = drift(state, pump_on)
             time.sleep(INTERVAL)
 
     except KeyboardInterrupt:

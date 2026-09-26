@@ -4,9 +4,9 @@ import PageHeader from "@/components/layout/PageHeader";
 import LoadingSpinner from "@/components/shared/LoadingSpinner";
 import EmptyState from "@/components/shared/EmptyState";
 import DataTable from "@/components/shared/DataTable";
+import DateTimeCell from "@/components/shared/DateTimeCell";
 
 import { useSensors } from "@/hooks/useSensors";
-import { formatDate } from "@/utils/formatDate";
 
 export default function HistoryPage() {
   const { history, loading, error } = useSensors(10000);
@@ -26,15 +26,15 @@ export default function HistoryPage() {
 
   const rows = history.map((reading) => [
     `${reading.id}`,
-    formatDate(reading.created_at),
-    `${reading.soil_moisture}%`,
+    <DateTimeCell key="time" iso={reading.created_at} />,
+    `${reading.soil_moisture}`,
     `${reading.ph}`,
     `${reading.ec ?? 0}`,
     `${reading.nitrogen}`,
     `${reading.phosphorus}`,
     `${reading.potassium}`,
-    `${reading.temperature}°C`,
-    `${reading.humidity}%`,
+    `${reading.temperature}`,
+    `${reading.humidity}`,
   ]);
 
   return (
@@ -48,15 +48,16 @@ export default function HistoryPage() {
         headers={[
           "ID",
           "Time",
-          "Moisture",
+          "Moisture (%)",
           "pH",
           "EC",
           "N",
           "P",
           "K",
-          "Temp",
-          "Humidity",
+          "Temp (°C)",
+          "Humidity (%)",
         ]}
+        mobileHeaders={["ID", "Time", "Moist %", "pH", "EC", "N", "P", "K", "Temp °C", "Hum %"]}
         rows={rows}
       />
     </div>

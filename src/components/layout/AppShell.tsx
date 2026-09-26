@@ -5,7 +5,6 @@ import { usePathname, useRouter } from "next/navigation";
 
 import Sidebar from "@/components/layout/Sidebar";
 import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
 import { isLoggedIn } from "@/services/authService";
 
 export default function AppShell({
@@ -47,14 +46,15 @@ export default function AppShell({
     <div className="flex">
       <Sidebar />
 
-      <div className="flex-1 min-h-screen flex flex-col">
+      <div className="flex-1 min-w-0 min-h-screen flex flex-col">
         <Navbar />
 
-        <main className="flex-1 p-8 bg-gray-50">
-          {children}
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 bg-gray-50 overflow-x-clip">
+          {/* Keyed by route so each page fades in as it opens. */}
+          <div key={pathname} className="animate-page-in">
+            {children}
+          </div>
         </main>
-
-        <Footer />
       </div>
     </div>
   );

@@ -17,3 +17,87 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* ------------------------------------------------------------ motion */
+
+/* Declared as theme animations so they work with Tailwind variants,
+   e.g. "animate-slide-in lg:animate-page-in". */
+@theme {
+  /* New page, settings section or form step fading in. */
+  --animate-page-in: page-in 0.35s ease-out both;
+
+  /* Dropdowns and popovers opening from their button. */
+  --animate-pop-in: pop-in 0.18s ease-out both;
+
+  /* Mobile drill-down: next level enters from the right, and the
+     previous level comes back from the left. */
+  --animate-slide-in: slide-in 0.3s ease-out both;
+  --animate-slide-back: slide-back 0.3s ease-out both;
+
+  @keyframes page-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes pop-in {
+    from {
+      opacity: 0;
+      transform: translateY(-4px) scale(0.97);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @keyframes slide-in {
+    from {
+      opacity: 0;
+      transform: translateX(32px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes slide-back {
+    from {
+      opacity: 0;
+      transform: translateX(-32px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+}
+
+@layer base {
+  /* A light press on every button, so taps feel acknowledged. Buttons
+     with their own transition utility keep it; utilities win over base. */
+  button {
+    transition: transform 0.12s ease-out;
+  }
+
+  button:not(:disabled):active {
+    transform: scale(0.97);
+  }
+}
+
+/* Respect the device setting for reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

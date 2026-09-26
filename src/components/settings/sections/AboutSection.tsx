@@ -20,9 +20,13 @@ export default function AboutSection() {
             Smart agriculture IoT platform for Ghana smallholder farmers
           </dd>
         </div>
-        <div className="flex justify-between gap-6 pb-1">
+        <div className="flex justify-between gap-6 border-b pb-3">
           <dt className="shrink-0 text-gray-600">Supported crops</dt>
           <dd className="text-right text-gray-800">Maize, Tomato, Onion</dd>
+        </div>
+        <div className="flex justify-between gap-6 pb-1">
+          <dt className="shrink-0 text-gray-600">Copyright</dt>
+          <dd className="text-right text-gray-800">HydroNutri-IntelliSense © 2026</dd>
         </div>
       </dl>
     </Card>
