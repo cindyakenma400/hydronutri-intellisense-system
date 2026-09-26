@@ -91,7 +91,7 @@ export default function DashboardPage() {
         <PumpStatusCard
           irrigationStatus={summary.irrigation_status}
           autoMode={controls?.auto_mode ?? true}
-          manualPumpOn={controls?.pump_on ?? false}
+          pumpOn={controls?.pump_on ?? false}
         />
 
         <FertilizationStatusCard

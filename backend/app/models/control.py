@@ -22,6 +22,11 @@ class SystemControl(Base):
     pump_started_at = Column(DateTime, nullable=True)
     pump_stopped_at = Column(DateTime, nullable=True)
 
+    # Same for the fertilizer valve: dose length and the wait before
+    # auto mode doses again.
+    valve_started_at = Column(DateTime, nullable=True)
+    valve_stopped_at = Column(DateTime, nullable=True)
+
     updated_at = Column(
         DateTime,
         default=datetime.utcnow,

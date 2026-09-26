@@ -52,8 +52,19 @@ struct Reading {
 // ------------------------------------------------------------------ relays
 
 void writeRelay(int pin, bool on) {
+#if RELAY_OFF_FLOATING
+  // Active-low board on 5 V: pull the input LOW for ON, and let it float
+  // for OFF. A 3.3 V HIGH is not high enough to switch those boards off.
+  if (on) {
+    pinMode(pin, OUTPUT);
+    digitalWrite(pin, LOW);
+  } else {
+    pinMode(pin, INPUT);
+  }
+#else
   bool level = RELAY_ACTIVE_LOW ? !on : on;
   digitalWrite(pin, level ? HIGH : LOW);
+#endif
 }
 
 void setPump(bool on) {

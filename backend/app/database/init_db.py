@@ -59,6 +59,10 @@ def _add_missing_columns():
     _add_column("system_controls", "pump_started_at", "DATETIME")
     _add_column("system_controls", "pump_stopped_at", "DATETIME")
 
+    # Fertilizer dose length and rest period.
+    _add_column("system_controls", "valve_started_at", "DATETIME")
+    _add_column("system_controls", "valve_stopped_at", "DATETIME")
+
 
 def init_db():
     Base.metadata.create_all(bind=engine)

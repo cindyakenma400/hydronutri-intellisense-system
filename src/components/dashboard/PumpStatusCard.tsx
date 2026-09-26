@@ -1,18 +1,16 @@
 interface PumpStatusCardProps {
   irrigationStatus?: string;
   autoMode?: boolean;
-  manualPumpOn?: boolean;
+  pumpOn?: boolean;
 }
 
+// pumpOn is the backend's pump state, the same value the ESP32 switches
+// the relay from, so this card always shows what the pump is doing.
 export default function PumpStatusCard({
   irrigationStatus = "Unknown",
   autoMode = true,
-  manualPumpOn = false,
+  pumpOn = false,
 }: PumpStatusCardProps) {
-  const autoDecision = irrigationStatus === "Irrigation Required";
-
-  // Auto mode: automation decides. Manual mode: the toggle decides.
-  const pumpOn = autoMode ? autoDecision : manualPumpOn;
 
   return (
     <div className="bg-white rounded-xl shadow p-6">

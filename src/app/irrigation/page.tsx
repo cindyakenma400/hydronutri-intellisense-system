@@ -70,11 +70,10 @@ export default function IrrigationPage() {
   }
 
   const autoMode = controls?.auto_mode ?? true;
-  const manualPump = controls?.pump_on ?? false;
 
-  // Manual override always wins. When the pump is manually on, it shows on.
-  // Otherwise, if auto mode is enabled, the automation decides.
-  const pumpOn = manualPump || (autoMode && status.irrigation_needed);
+  // The backend's pump state is what the ESP32 switches the relay from,
+  // in manual and auto mode alike, so show it as is.
+  const pumpOn = controls?.pump_on ?? false;
   return (
     <div className="space-y-6">
       <PageHeader

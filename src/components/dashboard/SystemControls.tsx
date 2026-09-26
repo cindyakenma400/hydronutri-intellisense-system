@@ -101,9 +101,11 @@ export default function SystemControl() {
       {error && <p className="text-sm text-red-600 mt-4">{error}</p>}
 
       <p className="text-xs text-gray-400 mt-4">
-        Auto mode runs the pump from soil moisture, using the trigger and
-        maximum runtime in Settings. Switching the pump by hand turns auto
-        mode off. The ESP32 polls this state to switch the physical relays.
+        Auto mode runs the pump from soil moisture and doses fertilizer when
+        N, P or K falls below the NPK trigger, using the limits in Settings.
+        Switching the pump by hand turns auto mode off. The fertilizer valve
+        always closes after the dose duration. The ESP32 polls this state to
+        switch the physical relays.
       </p>
     </div>
   );

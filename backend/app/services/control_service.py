@@ -14,6 +14,12 @@ MOISTURE_HYSTERESIS = 10.0
 # again, so a sensor stuck at a low value cannot run it back to back.
 PUMP_REST_MINUTES = 5
 
+# After a fertilizer dose, auto mode waits this long before dosing
+# again. Nutrients take time to dissolve and reach the probe, so NPK
+# readings stay low for a while after a dose; without this wait the
+# valve would dose on every reading.
+FERTILIZER_REST_MINUTES = 60
+
 
 def get_state(db: Session) -> SystemControl:
     """
@@ -56,22 +62,74 @@ def _switch_pump(state: SystemControl, on: bool) -> None:
     state.pump_on = on
 
 
+def _switch_valve(state: SystemControl, on: bool) -> None:
+    if on and not state.valve_on:
+        state.valve_started_at = datetime.utcnow()
+    elif not on and state.valve_on:
+        state.valve_stopped_at = datetime.utcnow()
+
+    state.valve_on = on
+
+
+def _is_sensor_frame_empty(reading) -> bool:
+    """
+    An all-zero frame means the soil sensor is disconnected or failed
+    to answer; acting on it would flood or over-fertilize the field.
+    """
+    values = (
+        reading.soil_moisture,
+        reading.temperature,
+        reading.ph,
+        reading.nitrogen,
+        reading.phosphorus,
+        reading.potassium,
+    )
+    return not any(values)
+
+
 def enforce_pump_cutoff(db: Session) -> SystemControl:
     """
     Stops the pump once it has run longer than the maximum runtime
     from Settings. Applies to manual and automatic starts alike, and
     runs on every status poll, so the pump cannot be left running if
     someone forgets it or the sensor stops reporting.
+
+    Also closes the fertilizer valve once the dose duration from
+    Settings has passed, for manual and automatic doses alike.
     """
     state = get_state(db)
+    now = datetime.utcnow()
+    changed = False
 
-    if state.pump_on and state.pump_started_at is not None:
-        limit = timedelta(minutes=_get_settings(db).max_pump_minutes or 15)
+    # A pump or valve switched on before the start-time columns existed
+    # has no start time, so the cutoff below would never fire. Start
+    # its clock now instead.
+    if state.pump_on and state.pump_started_at is None:
+        state.pump_started_at = now
+        changed = True
+    if state.valve_on and state.valve_started_at is None:
+        state.valve_started_at = now
+        changed = True
 
-        if datetime.utcnow() - state.pump_started_at >= limit:
+    if state.pump_on:
+        settings = _get_settings(db)
+        limit = timedelta(minutes=settings.max_pump_minutes or 15)
+
+        if now - state.pump_started_at >= limit:
             _switch_pump(state, False)
-            db.commit()
-            db.refresh(state)
+            changed = True
+
+    if state.valve_on:
+        settings = _get_settings(db)
+        limit = timedelta(seconds=settings.fertilizer_duration_seconds or 30)
+
+        if now - state.valve_started_at >= limit:
+            _switch_valve(state, False)
+            changed = True
+
+    if changed:
+        db.commit()
+        db.refresh(state)
 
     return state
 
@@ -93,7 +151,7 @@ def set_pump(db: Session, on: bool | None) -> SystemControl:
 
 def set_valve(db: Session, on: bool | None) -> SystemControl:
     state = get_state(db)
-    state.valve_on = (not state.valve_on) if on is None else on
+    _switch_valve(state, (not state.valve_on) if on is None else on)
     db.commit()
     db.refresh(state)
     return state
@@ -130,17 +188,7 @@ def apply_auto_irrigation(db: Session, reading) -> SystemControl:
     if not settings.auto_irrigation:
         return state
 
-    # An all-zero frame means the soil sensor is disconnected or failed
-    # to answer; irrigating on it would flood the field.
-    values = (
-        reading.soil_moisture,
-        reading.temperature,
-        reading.ph,
-        reading.nitrogen,
-        reading.phosphorus,
-        reading.potassium,
-    )
-    if not any(values):
+    if _is_sensor_frame_empty(reading):
         return state
 
     trigger = settings.moisture_trigger
@@ -159,4 +207,46 @@ def apply_auto_irrigation(db: Session, reading) -> SystemControl:
 
     db.commit()
     db.refresh(state)
+    return state
+
+
+def apply_auto_fertilization(db: Session, reading) -> SystemControl:
+    """
+    Runs after every sensor upload. With auto mode on (dashboard) and
+    automatic fertilization enabled (Settings), opens the fertilizer
+    valve when nitrogen, phosphorus or potassium is below the NPK
+    trigger. enforce_pump_cutoff() closes it again after the dose
+    duration, and FERTILIZER_REST_MINUTES must pass before the next
+    dose.
+    """
+    state = get_state(db)
+
+    if not state.auto_mode or state.valve_on:
+        return state
+
+    settings = _get_settings(db)
+
+    if not settings.auto_fertilization:
+        return state
+
+    if _is_sensor_frame_empty(reading):
+        return state
+
+    trigger = settings.npk_trigger
+    deficient = min(
+        reading.nitrogen,
+        reading.phosphorus,
+        reading.potassium,
+    ) < trigger
+
+    rested = state.valve_stopped_at is None or (
+        datetime.utcnow() - state.valve_stopped_at
+        >= timedelta(minutes=FERTILIZER_REST_MINUTES)
+    )
+
+    if deficient and rested:
+        _switch_valve(state, True)
+        db.commit()
+        db.refresh(state)
+
     return state

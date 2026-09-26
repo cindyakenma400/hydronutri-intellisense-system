@@ -25,6 +25,13 @@
 // Set to 0 if your board switches ON with HIGH.
 #define RELAY_ACTIVE_LOW 1
 
+// Set to 1 if the relay switches ON but never switches back OFF. That
+// happens with 5 V active-low relay boards: the ESP32's 3.3 V HIGH still
+// lets enough current through the board's input to hold the relay on.
+// With 1, OFF leaves the pin floating instead, which the board reads as
+// OFF. Only for active-low boards.
+#define RELAY_OFF_FLOATING 0
+
 // ---------------------------------------------------------------- soil sensor
 // CWT-SOIL-NPKPHCTH-S on RS485 through a MAX485 module.
 #define RS485_RX_PIN   16    // MAX485 RO

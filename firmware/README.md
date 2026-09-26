@@ -31,6 +31,18 @@ All pins can be changed in `config.h`.
 
 The soil probe register map in `readSoil()` is the common one for the CWT 7-in-1 probe. Check it against the datasheet that came with your sensor.
 
+## Troubleshooting: pump turns ON but not OFF
+
+Open the Serial Monitor and press OFF on the dashboard.
+
+- **`Pump OFF` is printed but the pump keeps running:** the ESP32 got the command and the relay board is ignoring it. This is usual with 5 V active-low relay boards driven from the ESP32's 3.3 V pins. Set `RELAY_OFF_FLOATING 1` in `config.h` and flash again, or power the relay board's input side (`VCC`, with the `JD-VCC` jumper removed) from 3.3 V.
+- **Nothing is printed:** the command is not reaching the ESP32. Check for `Control poll failed` lines (wrong `BACKEND_URL`, or a `DEVICE_API_KEY` mismatch gives 401), and check the dashboard shows no "session has expired" message under the buttons.
+- **The pump switches off, then back on by itself:** make sure the board runs this sketch and not an older one that switches the pump from its own moisture reading.
+
+## Automatic fertilization
+
+With Auto Mode on and "Automatic fertilization" enabled in Settings, the backend opens the fertilizer valve when nitrogen, phosphorus or potassium drops below the NPK trigger. The valve closes after the dose duration from Settings (manual doses too), and the next automatic dose waits at least 60 minutes so the nutrients can reach the probe.
+
 ## Safety behaviour
 
 - **WiFi or backend lost:** if no command arrives for 60 seconds, every relay switches off.
