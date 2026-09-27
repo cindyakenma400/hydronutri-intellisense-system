@@ -2,7 +2,7 @@
  * HydroNutri IntelliSense - ESP32 Firmware
  * Reads the CWT-SOIL-NPKPHCTH-S sensor over RS485 (Modbus RTU) via a
  * level shifter, POSTs readings to the FastAPI backend, and drives the
- * pump and fertiliser valve relays from the backend's control state.
+ * irrigation pump and fertilizer pump relays from the backend's control state.
  */
 
 #include <WiFi.h>
@@ -22,8 +22,8 @@ const int   BACKEND_PORT  = 8000;
 #define RS485_DE    4   // ESP32     -> shifter LV3 -> MAX485 DE+RE
 
 // ---- Relay pins ----
-#define PUMP_RELAY   26  // IN1 - irrigation pump
-#define VALVE_RELAY  27  // IN2 - fertiliser valve
+#define IRRIGATION_PUMP   40  // IN1 - irrigation pump
+#define FERTILIZER_PUMP   27  // IN2 - fertilizer pump
 
 // Set to 1 if the relay switches ON but never switches back OFF.
 // That happens with 5 V active-low relay boards driven from the
@@ -69,8 +69,8 @@ void relayOff(int pin) {
 }
 
 void allOff() {
-  relayOff(PUMP_RELAY);
-  relayOff(VALVE_RELAY);
+  relayOff(IRRIGATION_PUMP);
+  relayOff(FERTILIZER_PUMP);
 }
 
 // ---------------------------------------------------------------- Modbus
@@ -135,8 +135,8 @@ void setup() {
   pinMode(RS485_DE, OUTPUT);
   digitalWrite(RS485_DE, LOW);
 
-  pinMode(PUMP_RELAY, OUTPUT);
-  pinMode(VALVE_RELAY, OUTPUT);
+  pinMode(IRRIGATION_PUMP, OUTPUT);
+  pinMode(FERTILIZER_PUMP, OUTPUT);
   allOff();
 
   connectWiFi();
@@ -165,9 +165,9 @@ void loop() {
       if (deserializeJson(cDoc, ctrl.getString()) == DeserializationError::Ok) {
         bool pumpOn  = cDoc["pump_on"]  | false;
         bool valveOn = cDoc["valve_on"] | false;
-        pumpOn ? relayOn(PUMP_RELAY) : relayOff(PUMP_RELAY);
-        valveOn ? relayOn(VALVE_RELAY) : relayOff(VALVE_RELAY);
-        Serial.printf("Relays -> pump:%s valve:%s\n",
+        pumpOn ? relayOn(IRRIGATION_PUMP) : relayOff(IRRIGATION_PUMP);
+        valveOn ? relayOn(FERTILIZER_PUMP) : relayOff(FERTILIZER_PUMP);
+        Serial.printf("Relays -> irrigation:%s fertilizer:%s\n",
                       pumpOn ? "ON" : "OFF", valveOn ? "ON" : "OFF");
         lastControlOK = now;
       }
@@ -226,7 +226,7 @@ void loop() {
 
   // ---- Safety: no backend for 60 seconds -> all relays off ----
   if (now - lastControlOK >= COMMAND_TIMEOUT) {
-    Serial.println("Backend unreachable for 60s, switching all relays off");
+    Serial.println("Backend unreachable for 60s, switching all pumps off");
     allOff();
     lastControlOK = now;  // print the warning once per minute, not every loop
   }
