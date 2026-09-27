@@ -103,8 +103,9 @@ export default function SystemControl() {
       <p className="text-xs text-gray-400 mt-4">
         Auto mode activates the pump when moisture drops below 45% and stops
         it at 80%. It also doses fertilizer when NPK falls below the
-        crop-specific thresholds and stops when levels are optimal. Switching
-        the pump by hand turns auto mode off.
+        crop-specific thresholds and stops when levels are optimal. You can
+        switch the pump by hand at any time; auto mode will still stop it
+        when moisture reaches 80%.
       </p>
     </div>
   );

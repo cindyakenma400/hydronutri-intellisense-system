@@ -134,12 +134,13 @@ def set_pump(db: Session, on: bool | None) -> SystemControl:
     """
     Sets the pump explicitly, or flips it when on is None.
 
-    A manual command turns auto mode off; otherwise the next sensor
-    reading would undo what the user just asked for.
+    Auto mode stays on so the moisture thresholds still apply: the pump
+    will auto-stop at the moisture_stop level even after a manual start,
+    and auto-start when moisture drops below the trigger. The 5-minute
+    rest period after any stop prevents immediate re-start.
     """
     state = get_state(db)
     _switch_pump(state, (not state.pump_on) if on is None else on)
-    state.auto_mode = False
     db.commit()
     db.refresh(state)
     return state
