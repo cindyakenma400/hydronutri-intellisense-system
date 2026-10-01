@@ -8,13 +8,13 @@ from app.utils.thresholds import CROP_THRESHOLDS
 
 # After a stop, auto mode waits this long before starting the pump
 # again, so a sensor stuck at a low value cannot run it back to back.
-PUMP_REST_MINUTES = 5
+PUMP_REST_MINUTES = 3
 
 # After a fertilizer dose, auto mode waits this long before dosing
 # again. Nutrients take time to dissolve and reach the probe, so NPK
 # readings stay low for a while after a dose; without this wait the
 # valve would dose on every reading.
-FERTILIZER_REST_MINUTES = 60
+FERTILIZER_REST_SECONDS = 5
 
 
 def get_state(db: Session) -> SystemControl:
@@ -162,6 +162,7 @@ def set_auto_mode(db: Session, on: bool | None) -> SystemControl:
     # the user made by hand should not delay auto mode taking over.
     if state.auto_mode:
         state.pump_stopped_at = None
+        state.valve_stopped_at = None
 
     db.commit()
     db.refresh(state)
@@ -261,7 +262,7 @@ def apply_auto_fertilization(db: Session, reading) -> SystemControl:
     if not state.valve_on and deficient:
         rested = state.valve_stopped_at is None or (
             datetime.utcnow() - state.valve_stopped_at
-            >= timedelta(minutes=FERTILIZER_REST_MINUTES)
+            >= timedelta(seconds=FERTILIZER_REST_SECONDS)
         )
         if rested:
             _switch_valve(state, True)
