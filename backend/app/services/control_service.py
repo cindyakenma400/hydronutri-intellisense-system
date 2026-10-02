@@ -158,11 +158,12 @@ def set_auto_mode(db: Session, on: bool | None) -> SystemControl:
         if reading and not _is_sensor_frame_empty(reading):
             settings = _get_settings(db)
 
-            moisture = reading.soil_moisture
-            if moisture >= settings.moisture_stop:
-                _switch_pump(state, False)
-            else:
-                _switch_pump(state, True)
+            if settings.current_crop:
+                moisture = reading.soil_moisture
+                if moisture >= settings.moisture_stop:
+                    _switch_pump(state, False)
+                else:
+                    _switch_pump(state, True)
 
             if settings.auto_fertilization and settings.current_crop:
                 crop = settings.current_crop
@@ -199,6 +200,9 @@ def apply_auto_irrigation(db: Session, reading) -> SystemControl:
     settings = _get_settings(db)
 
     if not settings.auto_irrigation:
+        return state
+
+    if not settings.current_crop:
         return state
 
     if _is_sensor_frame_empty(reading):
