@@ -96,13 +96,15 @@ def _predict(sensor):
 
 def recommend_crop(db: Session):
     """
-    Combines two engines:
+    Primary: the rule engine scores every crop against optimal
+    thresholds and picks the best one with a transparent 0-100%
+    suitability score.
 
-      - the trained Random Forest decides WHICH crop suits the soil
-      - the rule engine explains WHY, and what to amend
+    Backup: if the rule engine ranking is empty (should not happen),
+    the trained Random Forest predicts the crop instead.
 
-    If the model is unavailable the rule engine's own top crop is used,
-    so the endpoint keeps working either way.
+    The ML model still runs when available so its prediction can be
+    compared in the thesis, but it no longer drives the dashboard.
     """
     sensor = get_latest_sensor_reading(db)
 
@@ -120,39 +122,26 @@ def recommend_crop(db: Session):
         ec_value
     )
 
+    best = ranking[0]
+    crop = best["crop"]
+    confidence = best["score"]
+    source = "rule_engine"
+    probabilities = {
+        item["crop"]: round(item["score"] / 100, 4)
+        for item in ranking
+    }
+    message = (
+        f"{crop} is the most suitable crop for the current soil "
+        f"conditions ({best['suitability']})."
+    )
+
     prediction = _predict(sensor)
+    ml_crop = None
+    ml_confidence = None
 
     if prediction is not None:
-        crop, probabilities = prediction
-        source = "machine_learning"
-        confidence = round(probabilities.get(crop, 0.0) * 100, 1)
-
-        # Find the rule-engine entry for the ML choice so we can attach
-        # its limiting factors and amendment suggestions.
-        match = next(
-            (item for item in ranking
-             if item["crop"].lower() == crop.lower()),
-            None
-        )
-        best = match if match is not None else ranking[0]
-
-        message = (
-            f"{crop} is predicted as the most suitable crop for the "
-            f"current soil conditions ({confidence}% confidence)."
-        )
-    else:
-        best = ranking[0]
-        crop = best["crop"]
-        source = "rule_engine"
-        confidence = best["score"]
-        probabilities = {
-            item["crop"]: round(item["score"] / 100, 4)
-            for item in ranking
-        }
-        message = (
-            f"{crop} is the most suitable crop for the current soil "
-            f"conditions ({best['suitability']})."
-        )
+        ml_crop, ml_probabilities = prediction
+        ml_confidence = round(ml_probabilities.get(ml_crop, 0.0) * 100, 1)
 
     save_recommendation(db, crop, confidence)
 
@@ -171,6 +160,8 @@ def recommend_crop(db: Session):
         "potassium": sensor.potassium,
         "ec": ec_value,
         "ranking": ranking,
+        "ml_crop": ml_crop,
+        "ml_confidence": ml_confidence,
     }
 
 
