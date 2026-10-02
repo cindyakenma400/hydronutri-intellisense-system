@@ -69,7 +69,10 @@ export function FertilizationSection({ settings, update, persist }: Props) {
           <select
             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:ring-1 focus:ring-green-500"
             value={crop}
-            onChange={(e) => update("currentCrop", e.target.value as CropType)}
+            onChange={(e) => {
+              update("currentCrop", e.target.value as CropType);
+              setTimeout(() => persist("Crop selection saved."), 0);
+            }}
           >
             {CROP_OPTIONS.map((c) => (
               <option key={c} value={c}>
@@ -110,7 +113,6 @@ export function FertilizationSection({ settings, update, persist }: Props) {
         </div>
       )}
 
-      <SaveBar onSave={() => persist()} />
     </Card>
   );
 }
