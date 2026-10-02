@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 
 from app.models.control import SystemControl
+from app.models.sensor import SensorReading
 from app.models.settings import SystemSettings
 from app.utils.thresholds import CROP_THRESHOLDS
 
@@ -158,11 +159,39 @@ def set_auto_mode(db: Session, on: bool | None) -> SystemControl:
     state = get_state(db)
     state.auto_mode = (not state.auto_mode) if on is None else on
 
-    # The rest period guards against auto mode cycling the pump. A stop
-    # the user made by hand should not delay auto mode taking over.
     if state.auto_mode:
         state.pump_stopped_at = None
         state.valve_stopped_at = None
+
+        reading = (
+            db.query(SensorReading)
+            .order_by(SensorReading.id.desc())
+            .first()
+        )
+
+        if reading and not _is_sensor_frame_empty(reading):
+            settings = _get_settings(db)
+
+            moisture = reading.soil_moisture
+            if moisture < settings.moisture_trigger:
+                _switch_pump(state, True)
+            elif moisture >= settings.moisture_stop:
+                _switch_pump(state, False)
+
+            if settings.auto_fertilization:
+                crop = settings.current_crop or "Tomato"
+                thresholds = CROP_THRESHOLDS.get(crop)
+                if thresholds:
+                    _, n_low, _, _ = thresholds["n"]
+                    _, p_low, _, _ = thresholds["p"]
+                    _, k_low, _, _ = thresholds["k"]
+                    if (reading.nitrogen < n_low
+                            or reading.phosphorus < p_low
+                            or reading.potassium < k_low):
+                        _switch_valve(state, True)
+    else:
+        _switch_pump(state, False)
+        _switch_valve(state, False)
 
     db.commit()
     db.refresh(state)
