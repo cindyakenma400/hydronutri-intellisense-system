@@ -173,10 +173,10 @@ def set_auto_mode(db: Session, on: bool | None) -> SystemControl:
             settings = _get_settings(db)
 
             moisture = reading.soil_moisture
-            if moisture < settings.moisture_trigger:
-                _switch_pump(state, True)
-            elif moisture >= settings.moisture_stop:
+            if moisture >= settings.moisture_stop:
                 _switch_pump(state, False)
+            else:
+                _switch_pump(state, True)
 
             if settings.auto_fertilization:
                 crop = settings.current_crop or "Tomato"
