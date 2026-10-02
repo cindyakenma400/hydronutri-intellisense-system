@@ -11,12 +11,6 @@ from app.utils.thresholds import CROP_THRESHOLDS
 # again, so a sensor stuck at a low value cannot run it back to back.
 PUMP_REST_MINUTES = 3
 
-# After a fertilizer dose, auto mode waits this long before dosing
-# again. Nutrients take time to dissolve and reach the probe, so NPK
-# readings stay low for a while after a dose; without this wait the
-# valve would dose on every reading.
-FERTILIZER_REST_SECONDS = 5
-
 
 def get_state(db: Session) -> SystemControl:
     """
@@ -116,14 +110,6 @@ def enforce_pump_cutoff(db: Session) -> SystemControl:
             _switch_pump(state, False)
             changed = True
 
-    if state.valve_on and state.valve_started_at is not None:
-        settings = _get_settings(db)
-        limit = timedelta(seconds=settings.fertilizer_duration_seconds or 30)
-
-        if now - state.valve_started_at >= limit:
-            _switch_valve(state, False)
-            changed = True
-
     if changed:
         db.commit()
         db.refresh(state)
@@ -178,8 +164,8 @@ def set_auto_mode(db: Session, on: bool | None) -> SystemControl:
             else:
                 _switch_pump(state, True)
 
-            if settings.auto_fertilization:
-                crop = settings.current_crop or "Tomato"
+            if settings.auto_fertilization and settings.current_crop:
+                crop = settings.current_crop
                 thresholds = CROP_THRESHOLDS.get(crop)
                 if thresholds:
                     _, n_low, _, _ = thresholds["n"]
@@ -240,19 +226,10 @@ def apply_auto_irrigation(db: Session, reading) -> SystemControl:
 
 def apply_auto_fertilization(db: Session, reading) -> SystemControl:
     """
-    Runs after every sensor upload. With auto mode on (dashboard) and
-    automatic fertilization enabled (Settings), opens the fertilizer
-    valve when nitrogen, phosphorus, or potassium is below the
-    crop-specific optimal low threshold. Closes the valve when all
-    three are at or above the crop-specific optimal high threshold,
-    so the soil is never over-saturated.
-
-    The crop thresholds come from thresholds.py and depend on the
-    current_crop setting (Tomato, Onion, or Maize).
-
-    enforce_pump_cutoff() also closes the valve after the dose
-    duration from Settings as a safety limit, and
-    FERTILIZER_REST_MINUTES must pass before the next dose.
+    Runs after every sensor upload. Opens the fertilizer valve when
+    any NPK nutrient is below the crop-specific optimal low threshold,
+    and closes it when all three reach the optimal high threshold.
+    Skips entirely when no crop is selected (current_crop is None).
     """
     state = get_state(db)
 
@@ -267,10 +244,11 @@ def apply_auto_fertilization(db: Session, reading) -> SystemControl:
     if _is_sensor_frame_empty(reading):
         return state
 
-    # Get the crop-specific NPK thresholds
-    crop = settings.current_crop or "Tomato"
-    thresholds = CROP_THRESHOLDS.get(crop)
+    crop = settings.current_crop
+    if not crop:
+        return state
 
+    thresholds = CROP_THRESHOLDS.get(crop)
     if thresholds is None:
         return state
 
@@ -289,14 +267,9 @@ def apply_auto_fertilization(db: Session, reading) -> SystemControl:
     sufficient = n >= n_high and p >= p_high and k >= k_high
 
     if not state.valve_on and deficient:
-        rested = state.valve_stopped_at is None or (
-            datetime.utcnow() - state.valve_stopped_at
-            >= timedelta(seconds=FERTILIZER_REST_SECONDS)
-        )
-        if rested:
-            _switch_valve(state, True)
-            db.commit()
-            db.refresh(state)
+        _switch_valve(state, True)
+        db.commit()
+        db.refresh(state)
 
     elif state.valve_on and sufficient:
         _switch_valve(state, False)

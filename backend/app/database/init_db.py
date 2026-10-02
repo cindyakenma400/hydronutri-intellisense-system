@@ -64,7 +64,7 @@ def _add_missing_columns():
     _add_column("system_controls", "valve_stopped_at", "DATETIME")
 
     # Current crop selection and moisture stop point.
-    _add_column("system_settings", "current_crop", "VARCHAR DEFAULT 'Tomato'")
+    _add_column("system_settings", "current_crop", "VARCHAR DEFAULT NULL")
     _add_column("system_settings", "moisture_stop", "FLOAT DEFAULT 80.0")
 
 

@@ -3,10 +3,9 @@
 import { Card, Field, SaveBar, Toggle } from "../ui";
 import { CropType, Settings } from "../settingsTypes";
 
-const CROP_OPTIONS: CropType[] = ["Tomato", "Onion", "Maize"];
+const CROP_OPTIONS: CropType[] = ["None", "Tomato", "Onion", "Maize"];
 
-// Crop-specific NPK optimal ranges (matching backend thresholds.py)
-const CROP_NPK_RANGES: Record<CropType, { n: string; p: string; k: string }> = {
+const CROP_NPK_RANGES: Record<string, { n: string; p: string; k: string }> = {
   Tomato: { n: "60 – 120", p: "40 – 80", k: "60 – 120" },
   Onion:  { n: "50 – 100", p: "35 – 70", k: "50 – 110" },
   Maize:  { n: "70 – 140", p: "30 – 70", k: "45 – 100" },
@@ -47,7 +46,7 @@ export function IrrigationSection({ settings, update, persist }: Props) {
 }
 
 export function FertilizationSection({ settings, update, persist }: Props) {
-  const crop = settings.currentCrop || "Tomato";
+  const crop = settings.currentCrop || "None";
   const ranges = CROP_NPK_RANGES[crop];
 
   return (
@@ -73,7 +72,9 @@ export function FertilizationSection({ settings, update, persist }: Props) {
             onChange={(e) => update("currentCrop", e.target.value as CropType)}
           >
             {CROP_OPTIONS.map((c) => (
-              <option key={c} value={c}>{c}</option>
+              <option key={c} value={c}>
+                {c === "None" ? "None (select after assessment)" : c}
+              </option>
             ))}
           </select>
           <p className="text-xs text-gray-400 mt-1">
@@ -85,20 +86,29 @@ export function FertilizationSection({ settings, update, persist }: Props) {
           onChange={(v) => update("fertilizerDurationSeconds", Number(v))} />
       </div>
 
-      <div className="mt-4 rounded-lg bg-gray-50 p-4">
-        <p className="text-sm font-medium text-gray-700 mb-2">
-          NPK thresholds for {crop} (mg/kg)
-        </p>
-        <div className="grid grid-cols-3 gap-3 text-sm text-gray-600">
-          <div><span className="font-medium">N:</span> {ranges.n}</div>
-          <div><span className="font-medium">P:</span> {ranges.p}</div>
-          <div><span className="font-medium">K:</span> {ranges.k}</div>
+      {crop !== "None" && ranges ? (
+        <div className="mt-4 rounded-lg bg-gray-50 p-4">
+          <p className="text-sm font-medium text-gray-700 mb-2">
+            NPK thresholds for {crop} (mg/kg)
+          </p>
+          <div className="grid grid-cols-3 gap-3 text-sm text-gray-600">
+            <div><span className="font-medium">N:</span> {ranges.n}</div>
+            <div><span className="font-medium">P:</span> {ranges.p}</div>
+            <div><span className="font-medium">K:</span> {ranges.k}</div>
+          </div>
+          <p className="text-xs text-gray-400 mt-2">
+            The valve opens when any nutrient falls below the lower value
+            and closes when all reach the upper value.
+          </p>
         </div>
-        <p className="text-xs text-gray-400 mt-2">
-          The valve opens when any nutrient falls below the lower value
-          and closes when all reach the upper value.
-        </p>
-      </div>
+      ) : (
+        <div className="mt-4 rounded-lg bg-amber-50 border border-amber-200 p-4">
+          <p className="text-sm text-amber-700">
+            Select a crop to enable automatic fertilization thresholds.
+            Run a soil suitability assessment first to determine the best crop.
+          </p>
+        </div>
+      )}
 
       <SaveBar onSave={() => persist()} />
     </Card>

@@ -15,7 +15,7 @@ class SystemSettings(Base):
     # The crop currently planted. The fertilizer valve uses this crop's
     # NPK thresholds from thresholds.py to decide when to dose and stop.
     # Set after running a soil suitability assessment.
-    current_crop = Column(String, default="Tomato")
+    current_crop = Column(String, default=None, nullable=True)
 
     auto_irrigation = Column(Boolean, default=True)
     moisture_trigger = Column(Float, default=45.0)

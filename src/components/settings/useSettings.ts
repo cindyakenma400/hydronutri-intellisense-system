@@ -8,7 +8,7 @@ import { DEFAULTS, STORAGE_KEY, Settings } from "./settingsTypes";
 // The subset of Settings that is persisted in the backend's
 // system_settings table (farm/profile fields stay local-only).
 type BackendSettings = {
-  current_crop: string;
+  current_crop: string | null;
   auto_irrigation: boolean;
   moisture_trigger: number;
   moisture_stop: number;
@@ -31,7 +31,7 @@ type BackendSettings = {
 
 function toBackend(settings: Settings): BackendSettings {
   return {
-    current_crop: settings.currentCrop,
+    current_crop: settings.currentCrop === "None" ? null : settings.currentCrop,
     auto_irrigation: settings.autoIrrigation,
     moisture_trigger: settings.moistureTrigger,
     moisture_stop: settings.moistureStop,
@@ -56,7 +56,7 @@ function toBackend(settings: Settings): BackendSettings {
 function fromBackend(current: Settings, backend: BackendSettings): Settings {
   return {
     ...current,
-    currentCrop: backend.current_crop as Settings["currentCrop"],
+    currentCrop: (backend.current_crop || "None") as Settings["currentCrop"],
     autoIrrigation: backend.auto_irrigation,
     moistureTrigger: backend.moisture_trigger,
     moistureStop: backend.moisture_stop,

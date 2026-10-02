@@ -14,7 +14,7 @@ import {
 
 export const STORAGE_KEY = "hydronutri.settings.v2";
 
-export type CropType = "Maize" | "Tomato" | "Onion";
+export type CropType = "None" | "Maize" | "Tomato" | "Onion";
 
 export type Settings = {
   farmName: string;
@@ -62,7 +62,7 @@ export const DEFAULTS: Settings = {
   email: "",
   phone: "",
 
-  currentCrop: "Tomato",
+  currentCrop: "None",
 
   autoIrrigation: true,
   moistureTrigger: 45,
