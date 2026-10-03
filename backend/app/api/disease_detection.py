@@ -1,5 +1,6 @@
-from fastapi import APIRouter, Depends, File, UploadFile, Form
+from fastapi import APIRouter, Depends, File, UploadFile, Form, HTTPException
 from sqlalchemy.orm import Session
+import traceback
 
 from app.database.dependencies import get_db
 from app.schemas.disease_schema import DiseasePredictionResponse
@@ -23,13 +24,20 @@ async def analyze_disease(
 ):
     contents = await file.read()
 
-    result = analyze_image(
-        db,
-        file.filename or "leaf.jpg",
-        contents,
-        crop=crop,
-        image_source=source,
-    )
+    try:
+        result = analyze_image(
+            db,
+            file.filename or "leaf.jpg",
+            contents,
+            crop=crop,
+            image_source=source,
+        )
+    except Exception as exc:
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Disease analysis failed: {exc}",
+        )
 
     return DiseasePredictionResponse(**result)
 
