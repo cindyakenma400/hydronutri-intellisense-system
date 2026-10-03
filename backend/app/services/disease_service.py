@@ -13,11 +13,15 @@ import numpy as np
 from PIL import Image
 import io
 
+TFLiteInterpreter = None
 try:
     from tflite_runtime.interpreter import Interpreter as TFLiteInterpreter
 except ImportError:
-    import tensorflow as tf
-    TFLiteInterpreter = tf.lite.Interpreter
+    try:
+        import tensorflow as tf
+        TFLiteInterpreter = tf.lite.Interpreter
+    except ImportError:
+        pass
 
 from sqlalchemy.orm import Session
 from app.models.disease import DiseaseDetection
@@ -130,7 +134,7 @@ def _load_crop_model(crop: str):
     model_path = crop_dir / "model.tflite"
     labels_path = crop_dir / "labels.txt"
 
-    if not model_path.exists() or not labels_path.exists():
+    if TFLiteInterpreter is None or not model_path.exists() or not labels_path.exists():
         _models[crop] = None
         return None
 

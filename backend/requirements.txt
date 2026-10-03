@@ -9,7 +9,6 @@ scikit-learn
 joblib
 opencv-python-headless
 pillow
-tflite-runtime
 python-dotenv
 requests
 bcrypt
