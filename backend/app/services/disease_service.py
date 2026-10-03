@@ -13,11 +13,7 @@ import numpy as np
 from PIL import Image
 import io
 
-try:
-    from tflite_runtime.interpreter import Interpreter as TFLiteInterpreter
-except ImportError:
-    import tensorflow as tf
-    TFLiteInterpreter = tf.lite.Interpreter
+import tensorflow as tf
 
 from sqlalchemy.orm import Session
 from app.models.disease import DiseaseDetection
@@ -134,7 +130,7 @@ def _load_crop_model(crop: str):
         _models[crop] = None
         return None
 
-    interpreter = TFLiteInterpreter(model_path=str(model_path))
+    interpreter = tf.lite.Interpreter(model_path=str(model_path))
     interpreter.allocate_tensors()
 
     # labels.txt lines look like: "0 Tomato_Early Blight"
