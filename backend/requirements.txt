@@ -7,8 +7,9 @@ pandas
 numpy
 scikit-learn
 joblib
-opencv-python
+opencv-python-headless
 pillow
+tflite-runtime
 python-dotenv
 requests
 bcrypt
