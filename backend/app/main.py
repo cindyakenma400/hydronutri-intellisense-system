@@ -34,6 +34,7 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "http://127.0.0.1:3000",
+        "https://hydronutri-intellisense-system.vercel.app",
     ],
     allow_origin_regex=(
         r"http://(10\.\d+\.\d+\.\d+"
