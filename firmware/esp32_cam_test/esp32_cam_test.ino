@@ -1,6 +1,5 @@
 /*
- * ESP32-CAM Simple Test v2
- * Streams video to a web browser so you can verify the camera works.
+ * ESP32-CAM Simple Test v3 - OV3660
  * Open Serial Monitor at 115200 after reset to see the IP address,
  * then open that IP in your browser.
  */
@@ -31,27 +30,26 @@ const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";
 #define HREF_GPIO_NUM     23
 #define PCLK_GPIO_NUM     22
 
-// Built-in LED flash
 #define FLASH_GPIO_NUM     4
 
 WiFiServer server(80);
 
 void setup() {
   Serial.begin(115200);
-  Serial.println("\n\nESP32-CAM Test v2 Starting...");
+  Serial.println("\n\nESP32-CAM Test v3 (OV3660) Starting...");
 
-  // Turn off the flash LED
+  // Turn off flash
   pinMode(FLASH_GPIO_NUM, OUTPUT);
   digitalWrite(FLASH_GPIO_NUM, LOW);
 
-  // Power cycle the camera to reset it
+  // Hard power cycle the camera
   pinMode(PWDN_GPIO_NUM, OUTPUT);
   digitalWrite(PWDN_GPIO_NUM, HIGH);
-  delay(200);
+  delay(500);
   digitalWrite(PWDN_GPIO_NUM, LOW);
-  delay(200);
+  delay(500);
 
-  // Camera configuration
+  // Camera configuration - conservative for OV3660
   camera_config_t config;
   config.ledc_channel = LEDC_CHANNEL_0;
   config.ledc_timer   = LEDC_TIMER_0;
@@ -71,79 +69,69 @@ void setup() {
   config.pin_sscb_scl = SIOC_GPIO_NUM;
   config.pin_pwdn     = PWDN_GPIO_NUM;
   config.pin_reset    = RESET_GPIO_NUM;
-  config.xclk_freq_hz = 20000000;
   config.pixel_format = PIXFORMAT_JPEG;
-  config.grab_mode    = CAMERA_GRAB_LATEST;
 
-  // Use lower resolution and quality for maximum reliability
-  config.frame_size   = FRAMESIZE_QVGA;   // 320x240 (smaller = more reliable)
-  config.jpeg_quality = 15;               // 0-63, higher = more compression
-  config.fb_count     = 2;                // 2 frame buffers for stability
-  config.fb_location  = CAMERA_FB_IN_PSRAM;
+  // OV3660 works better with 10MHz clock on some boards
+  config.xclk_freq_hz = 10000000;
 
-  // Check for PSRAM
-  if (psramFound()) {
-    Serial.println("PSRAM found, using higher settings");
-    config.frame_size   = FRAMESIZE_VGA;   // 640x480
-    config.jpeg_quality = 10;
-    config.fb_count     = 2;
-  } else {
-    Serial.println("No PSRAM, using low resolution");
-  }
+  // Start very small - QQVGA 160x120
+  config.frame_size   = FRAMESIZE_QQVGA;
+  config.jpeg_quality = 20;
+  config.fb_count     = 1;
+  config.fb_location  = CAMERA_FB_IN_DRAM;
+  config.grab_mode    = CAMERA_GRAB_WHEN_EMPTY;
+
+  Serial.printf("PSRAM found: %s\n", psramFound() ? "YES" : "NO");
 
   // Initialize camera
   esp_err_t err = esp_camera_init(&config);
   if (err != ESP_OK) {
-    Serial.printf("Camera init FAILED with error 0x%x\n", err);
-    if (err == 0x105) {
-      Serial.println("-> Camera not detected. Check the ribbon cable.");
-    } else if (err == 0x20001) {
-      Serial.println("-> Camera ID not found. Wrong camera type?");
-    }
-    Serial.println("Try: unplug, reseat ribbon cable, plug back in.");
+    Serial.printf("Camera init FAILED: 0x%x\n", err);
     return;
   }
   Serial.println("Camera init OK");
 
-  // Detect and configure the OV3660 sensor
+  // Detect sensor
   sensor_t *s = esp_camera_sensor_get();
   if (s) {
-    Serial.printf("Camera sensor PID: 0x%x\n", s->id.PID);
+    Serial.printf("Sensor PID: 0x%x\n", s->id.PID);
     if (s->id.PID == 0x3660) {
-      Serial.println("OV3660 detected - applying settings");
+      Serial.println("OV3660 confirmed");
       s->set_vflip(s, 1);
       s->set_brightness(s, 1);
-      s->set_saturation(s, -2);
-    } else if (s->id.PID == 0x2640) {
-      Serial.println("OV2640 detected");
-    } else {
-      Serial.printf("Unknown sensor: 0x%x\n", s->id.PID);
+      s->set_saturation(s, 0);
     }
   }
 
-  // Warm up: take and discard a few frames
-  Serial.print("Warming up camera");
-  for (int i = 0; i < 5; i++) {
+  // Warmup - take and discard frames
+  Serial.println("Warming up...");
+  for (int i = 0; i < 10; i++) {
     camera_fb_t* fb = esp_camera_fb_get();
     if (fb) {
-      Serial.printf(" [frame %d: %u bytes]", i + 1, fb->len);
+      Serial.printf("  Frame %d: %ux%u, %u bytes\n",
+                    i + 1, fb->width, fb->height, fb->len);
       esp_camera_fb_return(fb);
     } else {
-      Serial.printf(" [frame %d: FAILED]", i + 1);
+      Serial.printf("  Frame %d: FAILED\n", i + 1);
     }
-    delay(200);
+    delay(300);
   }
-  Serial.println(" Done");
 
-  // Test capture
+  // If QQVGA works, try stepping up to QVGA
+  Serial.println("Trying QVGA (320x240)...");
+  if (s) {
+    s->set_framesize(s, FRAMESIZE_QVGA);
+    delay(500);
+  }
+
   camera_fb_t* test = esp_camera_fb_get();
   if (test) {
-    Serial.printf("Test capture OK: %ux%u, %u bytes\n",
+    Serial.printf("QVGA capture OK: %ux%u, %u bytes\n",
                   test->width, test->height, test->len);
     esp_camera_fb_return(test);
   } else {
-    Serial.println("WARNING: Test capture failed!");
-    Serial.println("Camera may be defective or ribbon cable loose.");
+    Serial.println("QVGA failed, falling back to QQVGA");
+    if (s) s->set_framesize(s, FRAMESIZE_QQVGA);
   }
 
   // Connect to WiFi
@@ -154,12 +142,11 @@ void setup() {
     Serial.print(".");
   }
   Serial.println();
-  Serial.print("WiFi connected! IP address: ");
+  Serial.print("WiFi connected! IP: ");
   Serial.println(WiFi.localIP());
 
   server.begin();
-  Serial.println("Web server started.");
-  Serial.println("Open this IP in your browser to see the camera.");
+  Serial.println("Open this IP in your browser.");
 }
 
 void loop() {
@@ -172,17 +159,17 @@ void loop() {
   if (request.indexOf("/capture") >= 0) {
     camera_fb_t* fb = esp_camera_fb_get();
     if (!fb) {
-      Serial.println("Capture failed!");
+      Serial.println("Capture FAILED");
       client.println("HTTP/1.1 500 Internal Server Error");
       client.println("Content-Type: text/plain");
       client.println("Connection: close");
       client.println();
-      client.println("Camera capture failed. Check Serial Monitor.");
+      client.println("Capture failed");
       client.stop();
       return;
     }
 
-    Serial.printf("Capture OK: %u bytes\n", fb->len);
+    Serial.printf("Serve: %ux%u, %u bytes\n", fb->width, fb->height, fb->len);
     client.println("HTTP/1.1 200 OK");
     client.println("Content-Type: image/jpeg");
     client.printf("Content-Length: %u\r\n", fb->len);
@@ -202,24 +189,19 @@ void loop() {
     client.println("body{font-family:sans-serif;text-align:center;background:#111;color:#fff;margin:20px}");
     client.println("img{max-width:100%;border:2px solid #333;border-radius:8px}");
     client.println("h1{color:#4CAF50}");
-    client.println("a{color:#4CAF50}");
     client.println("</style></head><body>");
     client.println("<h1>ESP32-CAM Test</h1>");
-    client.println("<p>Camera is working! Image refreshes every 3 seconds.</p>");
-    client.println("<p><a href='/capture'>Click here for single capture</a></p>");
+    client.println("<p>Image refreshes every 3 seconds.</p>");
     client.println("<img id='cam' src='/capture'>");
-    client.println("<p id='status'>Loading...</p>");
+    client.println("<p id='s'>Loading...</p>");
     client.println("<script>");
-    client.println("var img = document.getElementById('cam');");
-    client.println("var status = document.getElementById('status');");
-    client.println("var count = 0;");
-    client.println("img.onload = function(){ status.textContent = 'Frame ' + (++count) + ' loaded'; };");
-    client.println("img.onerror = function(){ status.textContent = 'Frame failed - retrying...'; };");
-    client.println("setInterval(function(){");
-    client.println("  img.src = '/capture?' + Date.now();");
-    client.println("}, 3000);");
-    client.println("</script>");
-    client.println("</body></html>");
+    client.println("var img=document.getElementById('cam');");
+    client.println("var s=document.getElementById('s');");
+    client.println("var c=0;");
+    client.println("img.onload=function(){s.textContent='Frame '+(++c);};");
+    client.println("img.onerror=function(){s.textContent='Failed - retrying...';};");
+    client.println("setInterval(function(){img.src='/capture?'+Date.now();},3000);");
+    client.println("</script></body></html>");
   }
 
   client.stop();
