@@ -1,5 +1,5 @@
 /*
- * ESP32-CAM Simple Test
+ * ESP32-CAM Simple Test v2
  * Streams video to a web browser so you can verify the camera works.
  * Open Serial Monitor at 115200 after reset to see the IP address,
  * then open that IP in your browser.
@@ -31,11 +31,25 @@ const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";
 #define HREF_GPIO_NUM     23
 #define PCLK_GPIO_NUM     22
 
+// Built-in LED flash
+#define FLASH_GPIO_NUM     4
+
 WiFiServer server(80);
 
 void setup() {
   Serial.begin(115200);
-  Serial.println("\n\nESP32-CAM Test Starting...");
+  Serial.println("\n\nESP32-CAM Test v2 Starting...");
+
+  // Turn off the flash LED
+  pinMode(FLASH_GPIO_NUM, OUTPUT);
+  digitalWrite(FLASH_GPIO_NUM, LOW);
+
+  // Power cycle the camera to reset it
+  pinMode(PWDN_GPIO_NUM, OUTPUT);
+  digitalWrite(PWDN_GPIO_NUM, HIGH);
+  delay(200);
+  digitalWrite(PWDN_GPIO_NUM, LOW);
+  delay(200);
 
   // Camera configuration
   camera_config_t config;
@@ -59,20 +73,62 @@ void setup() {
   config.pin_reset    = RESET_GPIO_NUM;
   config.xclk_freq_hz = 20000000;
   config.pixel_format = PIXFORMAT_JPEG;
+  config.grab_mode    = CAMERA_GRAB_LATEST;
 
-  // Start with lower resolution for reliability
-  config.frame_size   = FRAMESIZE_VGA;   // 640x480
-  config.jpeg_quality = 12;              // 0-63, lower = better quality
-  config.fb_count     = 1;
+  // Use lower resolution and quality for maximum reliability
+  config.frame_size   = FRAMESIZE_QVGA;   // 320x240 (smaller = more reliable)
+  config.jpeg_quality = 15;               // 0-63, higher = more compression
+  config.fb_count     = 2;                // 2 frame buffers for stability
+  config.fb_location  = CAMERA_FB_IN_PSRAM;
+
+  // Check for PSRAM
+  if (psramFound()) {
+    Serial.println("PSRAM found, using higher settings");
+    config.frame_size   = FRAMESIZE_VGA;   // 640x480
+    config.jpeg_quality = 10;
+    config.fb_count     = 2;
+  } else {
+    Serial.println("No PSRAM, using low resolution");
+  }
 
   // Initialize camera
   esp_err_t err = esp_camera_init(&config);
   if (err != ESP_OK) {
     Serial.printf("Camera init FAILED with error 0x%x\n", err);
-    Serial.println("Check your wiring and board selection.");
+    if (err == 0x105) {
+      Serial.println("-> Camera not detected. Check the ribbon cable.");
+    } else if (err == 0x20001) {
+      Serial.println("-> Camera ID not found. Wrong camera type?");
+    }
+    Serial.println("Try: unplug, reseat ribbon cable, plug back in.");
     return;
   }
   Serial.println("Camera init OK");
+
+  // Warm up: take and discard a few frames
+  Serial.print("Warming up camera");
+  for (int i = 0; i < 5; i++) {
+    camera_fb_t* fb = esp_camera_fb_get();
+    if (fb) {
+      Serial.printf(" [frame %d: %u bytes]", i + 1, fb->len);
+      esp_camera_fb_return(fb);
+    } else {
+      Serial.printf(" [frame %d: FAILED]", i + 1);
+    }
+    delay(200);
+  }
+  Serial.println(" Done");
+
+  // Test capture
+  camera_fb_t* test = esp_camera_fb_get();
+  if (test) {
+    Serial.printf("Test capture OK: %ux%u, %u bytes\n",
+                  test->width, test->height, test->len);
+    esp_camera_fb_return(test);
+  } else {
+    Serial.println("WARNING: Test capture failed!");
+    Serial.println("Camera may be defective or ribbon cable loose.");
+  }
 
   // Connect to WiFi
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
@@ -98,26 +154,28 @@ void loop() {
   client.readString();
 
   if (request.indexOf("/capture") >= 0) {
-    // Single photo capture
     camera_fb_t* fb = esp_camera_fb_get();
     if (!fb) {
+      Serial.println("Capture failed!");
       client.println("HTTP/1.1 500 Internal Server Error");
+      client.println("Content-Type: text/plain");
+      client.println("Connection: close");
       client.println();
-      client.println("Camera capture failed");
+      client.println("Camera capture failed. Check Serial Monitor.");
+      client.stop();
       return;
     }
 
+    Serial.printf("Capture OK: %u bytes\n", fb->len);
     client.println("HTTP/1.1 200 OK");
     client.println("Content-Type: image/jpeg");
     client.printf("Content-Length: %u\r\n", fb->len);
     client.println("Connection: close");
     client.println();
     client.write(fb->buf, fb->len);
-
     esp_camera_fb_return(fb);
 
   } else {
-    // Simple HTML page with auto-refreshing image
     client.println("HTTP/1.1 200 OK");
     client.println("Content-Type: text/html");
     client.println("Connection: close");
@@ -128,14 +186,22 @@ void loop() {
     client.println("body{font-family:sans-serif;text-align:center;background:#111;color:#fff;margin:20px}");
     client.println("img{max-width:100%;border:2px solid #333;border-radius:8px}");
     client.println("h1{color:#4CAF50}");
+    client.println("a{color:#4CAF50}");
     client.println("</style></head><body>");
     client.println("<h1>ESP32-CAM Test</h1>");
-    client.println("<p>Camera is working! Image refreshes every 2 seconds.</p>");
+    client.println("<p>Camera is working! Image refreshes every 3 seconds.</p>");
+    client.println("<p><a href='/capture'>Click here for single capture</a></p>");
     client.println("<img id='cam' src='/capture'>");
+    client.println("<p id='status'>Loading...</p>");
     client.println("<script>");
+    client.println("var img = document.getElementById('cam');");
+    client.println("var status = document.getElementById('status');");
+    client.println("var count = 0;");
+    client.println("img.onload = function(){ status.textContent = 'Frame ' + (++count) + ' loaded'; };");
+    client.println("img.onerror = function(){ status.textContent = 'Frame failed - retrying...'; };");
     client.println("setInterval(function(){");
-    client.println("  document.getElementById('cam').src='/capture?'+Date.now();");
-    client.println("}, 2000);");
+    client.println("  img.src = '/capture?' + Date.now();");
+    client.println("}, 3000);");
     client.println("</script>");
     client.println("</body></html>");
   }
