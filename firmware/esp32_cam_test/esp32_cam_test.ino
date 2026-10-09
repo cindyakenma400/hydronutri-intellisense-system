@@ -105,6 +105,22 @@ void setup() {
   }
   Serial.println("Camera init OK");
 
+  // Detect and configure the OV3660 sensor
+  sensor_t *s = esp_camera_sensor_get();
+  if (s) {
+    Serial.printf("Camera sensor PID: 0x%x\n", s->id.PID);
+    if (s->id.PID == 0x3660) {
+      Serial.println("OV3660 detected - applying settings");
+      s->set_vflip(s, 1);
+      s->set_brightness(s, 1);
+      s->set_saturation(s, -2);
+    } else if (s->id.PID == 0x2640) {
+      Serial.println("OV2640 detected");
+    } else {
+      Serial.printf("Unknown sensor: 0x%x\n", s->id.PID);
+    }
+  }
+
   // Warm up: take and discard a few frames
   Serial.print("Warming up camera");
   for (int i = 0; i < 5; i++) {
