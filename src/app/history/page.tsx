@@ -34,7 +34,6 @@ export default function HistoryPage() {
     `${reading.phosphorus}`,
     `${reading.potassium}`,
     `${reading.temperature}`,
-    `${reading.humidity}`,
   ]);
 
   return (
@@ -55,9 +54,8 @@ export default function HistoryPage() {
           "P",
           "K",
           "Temp (°C)",
-          "Humidity (%)",
         ]}
-        mobileHeaders={["ID", "Time", "Moist %", "pH", "EC", "N", "P", "K", "Temp °C", "Hum %"]}
+        mobileHeaders={["ID", "Time", "Moist %", "pH", "EC", "N", "P", "K", "Temp °C"]}
         rows={rows}
       />
     </div>
