@@ -7,9 +7,7 @@ from app.models.sensor import SensorReading
 from app.models.settings import SystemSettings
 from app.utils.thresholds import CROP_THRESHOLDS
 
-# After a stop, auto mode waits this long before starting the pump
-# again, so a sensor stuck at a low value cannot run it back to back.
-PUMP_REST_MINUTES = 3
+PUMP_REST_SECONDS = 30
 
 
 def get_state(db: Session) -> SystemControl:
@@ -215,7 +213,7 @@ def apply_auto_irrigation(db: Session, reading) -> SystemControl:
     if not state.pump_on and moisture < trigger:
         rested = state.pump_stopped_at is None or (
             datetime.utcnow() - state.pump_stopped_at
-            >= timedelta(minutes=PUMP_REST_MINUTES)
+            >= timedelta(seconds=PUMP_REST_SECONDS)
         )
         if rested:
             _switch_pump(state, True)
