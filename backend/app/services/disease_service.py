@@ -12,6 +12,7 @@ from datetime import datetime
 import numpy as np
 from PIL import Image
 import io
+import colorsys
 
 import tensorflow as tf
 
@@ -109,6 +110,41 @@ TREATMENTS = {
     ],
     "Onion_Healthy": [],
 }
+
+
+# --------------------------------------------------- leaf validation
+
+# Minimum percentage of plant-colored pixels for the image to count as a leaf.
+LEAF_COLOR_THRESHOLD = 12.0
+
+
+def _is_likely_leaf(contents: bytes) -> tuple[bool, float]:
+    """
+    Checks whether the image plausibly contains a leaf by analyzing
+    its color distribution.  Leaves span green, yellow-green, brown,
+    and reddish-brown hues.  If fewer than LEAF_COLOR_THRESHOLD % of
+    pixels fall in plant-like color ranges the image is rejected.
+
+    Returns (is_leaf, plant_pixel_percentage).
+    """
+    image = Image.open(io.BytesIO(contents)).convert("RGB")
+    image = image.resize((100, 100))
+    pixels = np.asarray(image).reshape(-1, 3)
+
+    plant_count = 0
+    for r, g, b in pixels:
+        ri, gi, bi = int(r), int(g), int(b)
+        h, s, v = colorsys.rgb_to_hsv(ri / 255.0, gi / 255.0, bi / 255.0)
+        hue_deg = h * 360
+        # Green / yellow-green range (40-170 degrees)
+        if 40 <= hue_deg <= 170 and s > 0.10 and v > 0.08:
+            plant_count += 1
+        # Brown / reddish-brown diseased leaves (10-40 degrees)
+        elif 10 <= hue_deg < 40 and s > 0.15 and v > 0.08:
+            plant_count += 1
+
+    pct = round(plant_count / len(pixels) * 100, 1)
+    return pct >= LEAF_COLOR_THRESHOLD, pct
 
 
 # --------------------------------------------------------- model loading
@@ -219,7 +255,38 @@ def analyze_image(db: Session, filename: str, contents: bytes,
     with open(UPLOAD_DIR / safe_name, "wb") as f:
         f.write(contents)
 
-    # 2. Run the model
+    # 2. Check if the image actually looks like a leaf
+    is_leaf, plant_pct = _is_likely_leaf(contents)
+    if not is_leaf:
+        result = {
+            "crop": crop.capitalize(),
+            "disease_detected": "Not a leaf",
+            "confidence": round(min(plant_pct, 8.0), 1),
+            "severity": "N/A",
+            "treatment": [
+                "The uploaded image does not appear to be a leaf.",
+                "Please take a clear, close-up photo of a single leaf "
+                "against a plain background in good lighting.",
+            ],
+            "status": "not_leaf",
+            "image_source": f"{image_source} ({filename})",
+            "recommended_action": "Capture a clear photo of a leaf and try again.",
+        }
+
+        record = DiseaseDetection(
+            crop=result["crop"],
+            disease_detected=result["disease_detected"],
+            confidence=result["confidence"],
+            severity=result["severity"],
+            treatment=". ".join(result["treatment"]),
+            image_source=result["image_source"],
+            image_filename=safe_name,
+        )
+        db.add(record)
+        db.commit()
+        return result
+
+    # 3. Run the model
     prediction = _run_inference(crop, contents)
 
     if prediction is None:
