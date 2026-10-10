@@ -101,7 +101,6 @@ export default function DiseaseDetectionPage() {
               ? result.treatment.join(". ") || "No action needed."
               : "Select a crop, upload a leaf image, and click Analyze."
           }
-          status={result?.status}
         />
       </div>
 
