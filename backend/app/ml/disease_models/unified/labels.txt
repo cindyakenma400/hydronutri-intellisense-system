@@ -6,8 +6,8 @@
 5 Maize_Streak Virus
 6 Onion_Alternaria_D
 7 Onion_Botrytis Leaf Blight
-8 Onion_Bulb_blight_D
-9 Onion_Bulb_Rot
+8 Onion_Bulb_Rot
+9 Onion_Bulb_blight_D
 10 Onion_Downy_mildew
 11 Onion_Fusarium_D
 12 Onion_Healthy
@@ -15,14 +15,13 @@
 14 Onion_Rust
 15 Onion_Stemphylium Leaf Blight
 16 Onion_Yellow Dwarf Virus
-17 Tomato__Target_Spot
-18 Tomato__Tomato_mosaic_virus
-19 Tomato_Bacterial Spot
-20 Tomato_Early Blight
-21 Tomato_Healthy
-22 Tomato_Late_blight
-23 Tomato_Leaf_Mold
-24 Tomato_Septoria Leaf Spot
-25 Tomato_Spider_mites_Two_spotted_spider_mite
-26 Tomato_Yellow Leaf Curl Virus
-27 Unknown
+17 Tomato_Bacterial Spot
+18 Tomato_Early Blight
+19 Tomato_Healthy
+20 Tomato_Late_blight
+21 Tomato_Leaf_Mold
+22 Tomato_Septoria Leaf Spot
+23 Tomato_Spider_mites_Two_spotted_spider_mite
+24 Tomato__Target_Spot
+25 Tomato__Tomato_mosaic_virus
+26 Unknown
