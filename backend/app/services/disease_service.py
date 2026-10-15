@@ -305,7 +305,7 @@ def analyze_image(db: Session, filename: str, contents: bytes,
 
         if is_unknown or confidence < CONFIDENCE_THRESHOLD:
             result = {
-                "crop": detected_crop if not is_unknown else (crop or "tomato").strip().capitalize(),
+                "crop": detected_crop if not is_unknown else "Unknown",
                 "disease_detected": "Unknown" if is_unknown else "Uncertain",
                 "confidence": confidence,
                 "severity": "Unknown",
