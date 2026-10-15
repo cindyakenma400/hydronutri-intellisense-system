@@ -1,9 +1,10 @@
 """
-Disease detection service.
+Disease detection service — unified model.
 
-Loads a separate Teachable Machine model per crop (tomato, maize, onion),
-runs the uploaded or captured leaf image through the matching crop model,
-and returns the disease, confidence, and treatment advice.
+Uses a single TFLite model trained on all crops (Tomato, Maize, Onion)
+plus an "Unknown" class for unsupported leaves and non-leaf objects.
+The model auto-detects which crop a leaf belongs to from the predicted
+class name.
 """
 
 from pathlib import Path
@@ -20,17 +21,13 @@ from app.models.disease import DiseaseDetection
 
 # ------------------------------------------------------------------ paths
 
-# backend/app/ml/disease_models/<crop>/{model.tflite, labels.txt}
 ML_DIR = Path(__file__).resolve().parents[1] / "ml" / "disease_models"
+UNIFIED_DIR = ML_DIR / "unified"
 
-# Uploaded / captured leaf photos are stored here (inside backend/)
 UPLOAD_DIR = Path(__file__).resolve().parents[2] / "uploaded_leaves"
 
-# Teachable Machine image models expect 224x224 RGB.
 IMG_SIZE = 224
 
-# Below this confidence we do not trust the prediction (bad frame,
-# not a leaf, blurry photo). Tunable.
 CONFIDENCE_THRESHOLD = 35.0
 
 SUPPORTED_CROPS = ["tomato", "maize", "onion"]
@@ -38,37 +35,24 @@ SUPPORTED_CROPS = ["tomato", "maize", "onion"]
 
 # ------------------------------------------------------- treatment lookup
 
-# Practical, general guidance. Refine wording / local product names later.
 TREATMENTS = {
-    # ---- Tomato
-    "Tomato_Early Blight": [
-        "Remove and destroy affected lower leaves.",
-        "Avoid overhead watering; water at the base.",
-        "Apply a copper-based or chlorothalonil fungicide.",
-    ],
-    "Tomato_Bacterial Spot": [
-        "Remove infected leaves and avoid working with wet plants.",
-        "Use copper-based sprays early.",
-        "Rotate crops next season; use disease-free seed.",
-    ],
-    "Tomato_Septoria Leaf Spot": [
-        "Pick off spotted leaves promptly.",
-        "Mulch to stop soil splash onto leaves.",
-        "Apply a suitable fungicide if spread continues.",
-    ],
-    "Tomato_Yellow Leaf Curl Virus": [
-        "Remove and destroy infected plants; there is no cure.",
-        "Control whiteflies, which spread the virus.",
-        "Use resistant varieties and insect netting next cycle.",
-    ],
-    "Tomato_Healthy": [],
-
     # ---- Maize
+    "Maize fall armyworm": [
+        "Remove and destroy infested leaves and egg masses by hand.",
+        "Apply Bt (Bacillus thuringiensis) spray on young larvae.",
+        "Use neem-based insecticide as a natural control.",
+    ],
     "Maize_Common Rust": [
         "Remove heavily infected leaves where practical.",
         "Apply a foliar fungicide if infection is early and severe.",
         "Plant rust-resistant maize varieties next season.",
     ],
+    "Maize_Gray Leaf Spot": [
+        "Improve airflow; avoid dense planting.",
+        "Apply fungicide at first signs if conditions are humid.",
+        "Rotate crops and bury residue.",
+    ],
+    "Maize_Healthy": [],
     "Maize_Northern Leaf Blight": [
         "Remove crop debris after harvest to reduce spores.",
         "Apply fungicide at early lesion stage if severe.",
@@ -79,61 +63,134 @@ TREATMENTS = {
         "Control leafhoppers that transmit the virus.",
         "Plant early and use tolerant varieties.",
     ],
-    "Maize_Gray Leaf Spot": [
-        "Improve airflow; avoid dense planting.",
-        "Apply fungicide at first signs if conditions are humid.",
-        "Rotate crops and bury residue.",
-    ],
-    "Maize_Healthy": [],
 
     # ---- Onion
+    "Onion_Alternaria_D": [
+        "Remove and destroy infected leaves promptly.",
+        "Apply mancozeb or chlorothalonil fungicide preventively.",
+        "Avoid overhead irrigation; water at the base.",
+    ],
     "Onion_Botrytis Leaf Blight": [
         "Remove affected leaves; avoid overhead irrigation.",
         "Improve spacing for airflow.",
         "Apply a recommended fungicide preventively in wet weather.",
     ],
+    "Onion_Bulb_blight_D": [
+        "Remove and destroy affected bulbs immediately.",
+        "Improve soil drainage and avoid waterlogging.",
+        "Treat seed bulbs with a fungicide before planting.",
+    ],
+    "Onion_Bulb_Rot": [
+        "Remove infected bulbs and surrounding soil.",
+        "Ensure good drainage and avoid over-watering.",
+        "Apply a soil drench fungicide; rotate crops for 3 years.",
+    ],
+    "Onion_Downy_mildew": [
+        "Remove and destroy infected foliage.",
+        "Apply metalaxyl or mancozeb-based fungicide early.",
+        "Improve spacing and avoid overhead watering.",
+    ],
+    "Onion_Fusarium_D": [
+        "Remove and destroy infected plants and surrounding soil.",
+        "Solarize soil before next planting season.",
+        "Use disease-free seed and resistant varieties.",
+    ],
+    "Onion_Healthy": [],
     "Onion_Purple Blotch": [
         "Remove infected leaves early.",
         "Avoid leaf wetness; water at the base in the morning.",
         "Apply protective fungicide on a schedule in humid periods.",
     ],
-    "Onion_Yellow Dwarf Virus": [
-        "Remove and destroy infected plants; no cure.",
-        "Control aphids that spread the virus.",
-        "Use virus-free sets and resistant varieties.",
+    "Onion_Rust": [
+        "Remove and destroy infected leaves.",
+        "Apply a sulphur-based or systemic fungicide.",
+        "Improve airflow between plants and avoid excess nitrogen.",
     ],
     "Onion_Stemphylium Leaf Blight": [
         "Remove affected foliage promptly.",
         "Reduce leaf wetness and improve drainage.",
         "Apply an appropriate fungicide when symptoms begin.",
     ],
-    "Onion_Healthy": [],
+    "Onion_Yellow Dwarf Virus": [
+        "Remove and destroy infected plants; no cure.",
+        "Control aphids that spread the virus.",
+        "Use virus-free sets and resistant varieties.",
+    ],
+
+    # ---- Tomato
+    "Tomato__Target_Spot": [
+        "Remove and destroy infected leaves.",
+        "Improve plant spacing for better airflow.",
+        "Apply chlorothalonil or copper-based fungicide.",
+    ],
+    "Tomato__Tomato_mosaic_virus": [
+        "Remove and destroy infected plants; no cure.",
+        "Disinfect tools and hands after handling infected plants.",
+        "Use resistant varieties and disease-free seed.",
+    ],
+    "Tomato_Bacterial Spot": [
+        "Remove infected leaves and avoid working with wet plants.",
+        "Use copper-based sprays early.",
+        "Rotate crops next season; use disease-free seed.",
+    ],
+    "Tomato_Early Blight": [
+        "Remove and destroy affected lower leaves.",
+        "Avoid overhead watering; water at the base.",
+        "Apply a copper-based or chlorothalonil fungicide.",
+    ],
+    "Tomato_Healthy": [],
+    "Tomato_Late_blight": [
+        "Remove and destroy infected plants immediately.",
+        "Apply metalaxyl or copper-based fungicide preventively.",
+        "Avoid overhead watering and improve airflow.",
+    ],
+    "Tomato_Leaf_Mold": [
+        "Improve ventilation; reduce humidity in the growing area.",
+        "Remove infected leaves promptly.",
+        "Apply a fungicide if spread is severe.",
+    ],
+    "Tomato_Septoria Leaf Spot": [
+        "Pick off spotted leaves promptly.",
+        "Mulch to stop soil splash onto leaves.",
+        "Apply a suitable fungicide if spread continues.",
+    ],
+    "Tomato_Spider_mites_Two_spotted_spider_mite": [
+        "Spray plants with a strong jet of water to dislodge mites.",
+        "Apply neem oil or insecticidal soap.",
+        "Introduce predatory mites as biological control.",
+    ],
+    "Tomato_Yellow Leaf Curl Virus": [
+        "Remove and destroy infected plants; there is no cure.",
+        "Control whiteflies, which spread the virus.",
+        "Use resistant varieties and insect netting next cycle.",
+    ],
+
+    # ---- Unknown
+    "Unknown": [],
 }
 
 
 # --------------------------------------------------------- model loading
 
-# Each crop's interpreter and labels are loaded once, on first use.
-_models = {}
+_model = None
 
 
-def _load_crop_model(crop: str):
-    """Loads and caches the interpreter + labels for one crop."""
-    if crop in _models:
-        return _models[crop]
+def _load_model():
+    """Loads and caches the unified interpreter + labels."""
+    global _model
+    if _model is not None:
+        return _model
 
-    crop_dir = ML_DIR / crop
-    model_path = crop_dir / "model.tflite"
-    labels_path = crop_dir / "labels.txt"
+    model_path = UNIFIED_DIR / "model.tflite"
+    labels_path = UNIFIED_DIR / "labels.txt"
 
     if not model_path.exists() or not labels_path.exists():
-        _models[crop] = None
-        return None
+        _model = False
+        return False
 
     interpreter = tf.lite.Interpreter(model_path=str(model_path))
     interpreter.allocate_tensors()
 
-    # labels.txt lines look like: "0 Tomato_Early Blight"
     labels = []
     with open(labels_path, "r", encoding="utf-8") as f:
         for line in f:
@@ -143,23 +200,33 @@ def _load_crop_model(crop: str):
             parts = line.split(" ", 1)
             labels.append(parts[1] if len(parts) > 1 else parts[0])
 
-    bundle = {
+    _model = {
         "interpreter": interpreter,
         "labels": labels,
         "input": interpreter.get_input_details(),
         "output": interpreter.get_output_details(),
     }
-    _models[crop] = bundle
-    return bundle
+    return _model
+
+
+def _extract_crop(label: str) -> str:
+    """Extracts the crop name from a predicted class label."""
+    lower = label.lower()
+    if lower.startswith("tomato"):
+        return "Tomato"
+    if lower.startswith("maize"):
+        return "Maize"
+    if lower.startswith("onion"):
+        return "Onion"
+    return "Unknown"
 
 
 def _preprocess(contents: bytes, input_dtype):
     """
     Turns raw image bytes into the 224x224 batch the model expects.
 
-    Quantized Teachable Machine models want raw UINT8 pixels (0-255).
-    Float models want pixels normalized to [-1, 1]. We match whichever
-    the model was exported as.
+    The unified model was trained with rescale=1/255 so float inputs
+    are in [0, 1]. Quantized models expect UINT8 pixels (0-255).
     """
     image = Image.open(io.BytesIO(contents)).convert("RGB")
     image = image.resize((IMG_SIZE, IMG_SIZE))
@@ -168,14 +235,15 @@ def _preprocess(contents: bytes, input_dtype):
     if input_dtype == np.uint8:
         array = array.astype(np.uint8)
     else:
-        array = (array.astype(np.float32) / 127.5) - 1.0
+        array = array.astype(np.float32) / 255.0
 
     return np.expand_dims(array, axis=0)
 
-def _run_inference(crop: str, contents: bytes):
+
+def _run_inference(contents: bytes):
     """Returns (label, confidence_percent) or None if the model is missing."""
-    bundle = _load_crop_model(crop)
-    if bundle is None:
+    bundle = _load_model()
+    if not bundle:
         return None
 
     interpreter = bundle["interpreter"]
@@ -191,27 +259,23 @@ def _run_inference(crop: str, contents: bytes):
     scores = interpreter.get_tensor(output_details[0]["index"])[0]
     top = int(np.argmax(scores))
 
-    # Quantized models output 0-255 scores; float models output 0-1.
     raw = float(scores[top])
     confidence = round((raw / 255.0 if scores.dtype == np.uint8 else raw) * 100, 1)
 
     label = bundle["labels"][top]
     return label, confidence
 
+
 # ------------------------------------------------------------- main entry
 
 def analyze_image(db: Session, filename: str, contents: bytes,
                   crop: str = "tomato", image_source: str = "Web Upload"):
     """
-    Saves the image, runs the matching crop model, and records the result.
+    Saves the image, runs the unified model, and records the result.
 
-    `crop` selects which model runs. `image_source` distinguishes a manual
-    web upload from an automatic ESP32-CAM capture.
+    The `crop` parameter is accepted for API compatibility but the
+    unified model auto-detects the crop from the predicted class name.
     """
-    crop = (crop or "tomato").strip().lower()
-    if crop not in SUPPORTED_CROPS:
-        crop = "tomato"
-
     # 1. Save the uploaded image
     UPLOAD_DIR.mkdir(exist_ok=True)
     timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
@@ -220,41 +284,45 @@ def analyze_image(db: Session, filename: str, contents: bytes,
         f.write(contents)
 
     # 2. Run the model
-    prediction = _run_inference(crop, contents)
+    prediction = _run_inference(contents)
 
     if prediction is None:
         result = {
-            "crop": crop.capitalize(),
+            "crop": (crop or "tomato").strip().capitalize(),
             "disease_detected": "Model unavailable",
             "confidence": 0.0,
             "severity": "Unknown",
-            "treatment": ["The disease model for this crop is not installed."],
+            "treatment": ["The unified disease model is not installed."],
             "status": "error",
             "image_source": f"{image_source} ({filename})",
-            "recommended_action": "Check that the crop model files are present.",
+            "recommended_action": "Place model.tflite and labels.txt in backend/app/ml/disease_models/unified/",
         }
     else:
         label, confidence = prediction
+        detected_crop = _extract_crop(label)
         is_healthy = label.lower().endswith("healthy")
+        is_unknown = label == "Unknown"
 
-        if confidence < CONFIDENCE_THRESHOLD:
-            # Low confidence: don't trust it. Likely a poor image.
+        if is_unknown or confidence < CONFIDENCE_THRESHOLD:
             result = {
-                "crop": crop.capitalize(),
-                "disease_detected": "Uncertain",
+                "crop": detected_crop if not is_unknown else (crop or "tomato").strip().capitalize(),
+                "disease_detected": "Unknown" if is_unknown else "Uncertain",
                 "confidence": confidence,
                 "severity": "Unknown",
                 "treatment": [
-                    "The result is not confident. Make sure you selected the correct "
-                    "crop, and upload a clear close-up of a single leaf in good light.",
+                    "The image could not be identified as a supported crop leaf. "
+                    "Upload a clear close-up of a single tomato, maize, or onion leaf in good light.",
+                ] if is_unknown else [
+                    "The result is not confident. Upload a clear close-up of a "
+                    "single leaf in good light.",
                 ],
-                "status": "uncertain",
+                "status": "unknown" if is_unknown else "uncertain",
                 "image_source": f"{image_source} ({filename})",
-                "recommended_action": "Retake a clearer close-up of one leaf.",
+                "recommended_action": "Take a clear photo of a single leaf from a supported crop.",
             }
         elif is_healthy:
             result = {
-                "crop": crop.capitalize(),
+                "crop": detected_crop,
                 "disease_detected": "Healthy",
                 "confidence": confidence,
                 "severity": "None",
@@ -264,8 +332,12 @@ def analyze_image(db: Session, filename: str, contents: bytes,
                 "recommended_action": "No action needed. Keep monitoring.",
             }
         else:
-            # Clean disease name for display: drop the crop prefix.
-            display = label.split("_", 1)[-1] if "_" in label else label
+            display = label
+            for prefix in ("Tomato__", "Tomato_", "Maize_", "Maize ", "Onion_"):
+                if label.startswith(prefix):
+                    display = label[len(prefix):]
+                    break
+
             severity = "Moderate"
             if confidence >= 85:
                 severity = "High"
@@ -273,7 +345,7 @@ def analyze_image(db: Session, filename: str, contents: bytes,
                 severity = "Mild"
 
             result = {
-                "crop": crop.capitalize(),
+                "crop": detected_crop,
                 "disease_detected": display,
                 "confidence": confidence,
                 "severity": severity,
