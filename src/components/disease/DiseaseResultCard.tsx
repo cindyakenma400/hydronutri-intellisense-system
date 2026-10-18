@@ -1,12 +1,14 @@
 interface DiseaseResultCardProps {
   disease?: string;
   confidence?: number;
+  crop?: string;
   treatment?: string;
 }
 
 export default function DiseaseResultCard({
   disease = "Early Blight",
   confidence = 92,
+  crop,
   treatment = "Apply fungicide and remove infected leaves.",
 }: DiseaseResultCardProps) {
   return (
@@ -16,6 +18,15 @@ export default function DiseaseResultCard({
       </h2>
 
       <div className="space-y-3">
+        {crop && (
+          <div>
+            <span className="font-semibold">
+              Crop Detected:
+            </span>{" "}
+            {crop}
+          </div>
+        )}
+
         <div>
           <span className="font-semibold">
             Disease:

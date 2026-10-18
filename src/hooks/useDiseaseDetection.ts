@@ -30,10 +30,10 @@ export function useDiseaseDetection() {
     loadHistory();
   }, []);
 
-  async function analyze(file: File, crop: string = "tomato") {
+  async function analyze(file: File) {
     setLoading(true);
     try {
-      const data = await analyzeDisease(file, crop);
+      const data = await analyzeDisease(file);
       setResult(data);
       setError(null);
       await loadHistory();
