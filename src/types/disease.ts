@@ -16,6 +16,7 @@ export interface DiseaseHistoryItem {
   disease_detected: string;
   confidence: number;
   severity: string;
+  treatment?: string | null;
   image_source: string;
   image_url?: string | null;
   created_at: string;

@@ -13,3 +13,7 @@ export function analyzeDisease(file: File) {
 export function getDiseaseHistory() {
   return apiGet<DiseaseHistoryItem[]>("/disease/history");
 }
+
+export function getLatestCapture() {
+  return apiGet<DiseaseHistoryItem | null>("/disease/latest-capture");
+}

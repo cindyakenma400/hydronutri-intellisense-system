@@ -374,10 +374,17 @@ def analyze_image(db: Session, filename: str, contents: bytes,
     return result
 
 
-def get_history(db: Session, limit: int = 20):
+def get_history(db: Session, limit: int = 20, source: str | None = None):
+    query = db.query(DiseaseDetection)
+    if source:
+        query = query.filter(DiseaseDetection.image_source.ilike(f"{source}%"))
+    return query.order_by(DiseaseDetection.created_at.desc()).limit(limit).all()
+
+
+def get_latest_by_source(db: Session, source: str):
     return (
         db.query(DiseaseDetection)
+        .filter(DiseaseDetection.image_source.ilike(f"{source}%"))
         .order_by(DiseaseDetection.created_at.desc())
-        .limit(limit)
-        .all()
+        .first()
     )
