@@ -13,4 +13,4 @@ python-dotenv
 requests
 bcrypt
 PyJWT
-tflite-runtime
+ai-edge-litert

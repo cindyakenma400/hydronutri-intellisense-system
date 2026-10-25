@@ -15,7 +15,7 @@ from PIL import Image
 import io
 
 try:
-    import tflite_runtime.interpreter as tflite
+    import ai_edge_litert.interpreter as tflite
 except ImportError:
     import tensorflow as tf
     tflite = tf.lite
