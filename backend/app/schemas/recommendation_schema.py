@@ -50,6 +50,15 @@ class RecommendationHistoryItem(BaseModel):
     id: int
     recommended_crop: str
     confidence: float
+    soil_moisture: float
+    soil_ph: float
+    nitrogen: float
+    phosphorus: float
+    potassium: float
+    ec: float
+    limiting_factors: List[str]
+    suggestions: List[str]
+    message: str
     created_at: datetime
 
     class Config:

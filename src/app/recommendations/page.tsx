@@ -5,12 +5,20 @@ import { useEffect, useState } from "react";
 import PageHeader from "@/components/layout/PageHeader";
 import LoadingSpinner from "@/components/shared/LoadingSpinner";
 import EmptyState from "@/components/shared/EmptyState";
+import DateTimeCell from "@/components/shared/DateTimeCell";
 
-import { CropRecommendation } from "@/types/recommendation";
-import { getCropRecommendation } from "@/services/recommendationService";
+import {
+  CropRecommendation,
+  RecommendationHistoryItem,
+} from "@/types/recommendation";
+import {
+  getCropRecommendation,
+  getRecommendationHistory,
+} from "@/services/recommendationService";
 
 export default function RecommendationsPage() {
   const [data, setData] = useState<CropRecommendation | null>(null);
+  const [history, setHistory] = useState<RecommendationHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -19,11 +27,15 @@ export default function RecommendationsPage() {
 
     async function load() {
       try {
+        // Fetch the current recommendation first (this records it on the
+        // backend), then read the history so the newest entry is included.
         const result = await getCropRecommendation();
+        const past = await getRecommendationHistory();
 
         if (!active) return;
 
         setData(result);
+        setHistory(past);
         setError(null);
       } catch (err) {
         if (!active) return;
@@ -129,6 +141,77 @@ export default function RecommendationsPage() {
             )}
           </div>
         ))}
+      </div>
+
+      <div className="bg-white rounded-xl shadow p-4 sm:p-6">
+        <h2 className="text-lg font-semibold mb-1">
+          Recommendation History
+        </h2>
+        <p className="text-sm text-gray-500 mb-4">
+          Past recommendations, newest first, with the soil conditions and
+          reasons behind each one. A new entry is kept each time the advice
+          changes.
+        </p>
+
+        {history.length === 0 ? (
+          <p className="text-gray-500">
+            No past recommendations yet. As soil conditions change, each new
+            recommendation will be recorded here.
+          </p>
+        ) : (
+          <div className="space-y-4">
+            {history.map((item) => (
+              <div
+                key={item.id}
+                className="border border-gray-200 rounded-lg p-4"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-green-700 text-lg">
+                      {item.recommended_crop}
+                    </span>
+                    <span className="text-sm text-gray-500">
+                      {item.confidence}% suitable
+                    </span>
+                  </div>
+                  <span className="text-sm text-gray-500 text-right">
+                    <DateTimeCell iso={item.created_at} />
+                  </span>
+                </div>
+
+                <p className="mt-2 text-sm text-gray-600">
+                  Soil: moisture {item.soil_moisture}% · pH {item.soil_ph} ·
+                  N {item.nitrogen} · P {item.phosphorus} · K {item.potassium} ·
+                  EC {item.ec} dS/m
+                </p>
+
+                {item.limiting_factors.length > 0 ? (
+                  <div className="mt-3">
+                    <p className="text-sm font-medium text-gray-700">
+                      Needs attention: {item.limiting_factors.join(", ")}
+                    </p>
+                    {item.suggestions.length > 0 && (
+                      <ul className="mt-2 space-y-1">
+                        {item.suggestions.map((tip, index) => (
+                          <li
+                            key={index}
+                            className="text-sm text-gray-600 bg-yellow-50 border border-yellow-200 rounded-lg p-2"
+                          >
+                            {tip}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                ) : (
+                  <p className="mt-3 text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg p-2">
+                    Soil conditions were ideal for this crop.
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
