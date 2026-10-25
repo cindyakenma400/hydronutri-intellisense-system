@@ -45,6 +45,7 @@ def disease_history(db: Session = Depends(get_db)):
             "disease_detected": r.disease_detected,
             "confidence": r.confidence,
             "severity": r.severity,
+            "treatment": r.treatment,
             "image_source": r.image_source,
             "image_url": f"/uploaded_leaves/{r.image_filename}" if r.image_filename else None,
             "created_at": r.created_at,
