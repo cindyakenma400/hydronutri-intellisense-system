@@ -17,6 +17,7 @@ const COLUMNS = [
   { label: "Disease", short: "Crop / Disease" },
   { label: "Confidence", short: "", phoneHidden: true },
   { label: "Severity", short: "Sev. / Conf." },
+  { label: "Recommendation", short: "Action" },
   { label: "Source", short: "Src" },
 ];
 
@@ -109,8 +110,14 @@ export default function DiseaseHistoryTable({
                     <span className="sm:hidden block text-gray-500">{item.confidence}%</span>
                   </td>
 
-                  {/* Wraps by words ("Web Upload" / "(leaf.jpg)"), never
-                      letter by letter. */}
+                  <td className={`${CELL} text-gray-600 max-w-[180px] sm:max-w-[260px]`}>
+                    <p className="line-clamp-3 sm:line-clamp-4">
+                      {item.treatment && item.treatment !== "None"
+                        ? item.treatment
+                        : "No action needed."}
+                    </p>
+                  </td>
+
                   <td className={`${CELL} text-gray-500 min-w-16 sm:min-w-0`}>
                     {item.image_source}
                   </td>

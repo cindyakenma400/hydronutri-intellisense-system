@@ -57,6 +57,7 @@ def disease_history(
     records = get_history(db, source=source)
     return [_record_to_dict(r) for r in records]
 
+<<<<<<< HEAD
 
 @router.get("/latest-capture")
 def latest_capture(db: Session = Depends(get_db)):
@@ -64,3 +65,19 @@ def latest_capture(db: Session = Depends(get_db)):
     if record is None:
         return None
     return _record_to_dict(record)
+=======
+    return [
+        {
+            "id": r.id,
+            "crop": r.crop,
+            "disease_detected": r.disease_detected,
+            "confidence": r.confidence,
+            "severity": r.severity,
+            "treatment": r.treatment,
+            "image_source": r.image_source,
+            "image_url": f"/uploaded_leaves/{r.image_filename}" if r.image_filename else None,
+            "created_at": r.created_at,
+        }
+        for r in records
+    ]
+>>>>>>> origin/claude/gracious-wozniak-r1cyri
