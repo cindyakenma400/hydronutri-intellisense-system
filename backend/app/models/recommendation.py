@@ -22,6 +22,20 @@ class Recommendation(Base):
 
     confidence = Column(Float)
 
+    # Soil snapshot at the time the recommendation was made, so the
+    # farmer can see the conditions behind each past recommendation.
+    soil_moisture = Column(Float, default=0.0)
+    soil_ph = Column(Float, default=0.0)
+    nitrogen = Column(Float, default=0.0)
+    phosphorus = Column(Float, default=0.0)
+    potassium = Column(Float, default=0.0)
+    ec = Column(Float, default=0.0)
+
+    # Why this recommendation was given (JSON-encoded lists of strings).
+    limiting_factors = Column(String, default="[]")
+    suggestions = Column(String, default="[]")
+    message = Column(String, default="")
+
     created_at = Column(
         DateTime,
         default=datetime.utcnow

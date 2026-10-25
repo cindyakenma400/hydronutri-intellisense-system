@@ -67,6 +67,18 @@ def _add_missing_columns():
     _add_column("system_settings", "current_crop", "VARCHAR DEFAULT NULL")
     _add_column("system_settings", "moisture_stop", "FLOAT DEFAULT 80.0")
 
+    # Soil snapshot and reasons stored with each crop recommendation,
+    # so the recommendation history shows why each one was made.
+    _add_column("crop_recommendations", "soil_moisture", "FLOAT DEFAULT 0.0")
+    _add_column("crop_recommendations", "soil_ph", "FLOAT DEFAULT 0.0")
+    _add_column("crop_recommendations", "nitrogen", "FLOAT DEFAULT 0.0")
+    _add_column("crop_recommendations", "phosphorus", "FLOAT DEFAULT 0.0")
+    _add_column("crop_recommendations", "potassium", "FLOAT DEFAULT 0.0")
+    _add_column("crop_recommendations", "ec", "FLOAT DEFAULT 0.0")
+    _add_column("crop_recommendations", "limiting_factors", "VARCHAR DEFAULT '[]'")
+    _add_column("crop_recommendations", "suggestions", "VARCHAR DEFAULT '[]'")
+    _add_column("crop_recommendations", "message", "VARCHAR DEFAULT ''")
+
 
 def init_db():
     Base.metadata.create_all(bind=engine)

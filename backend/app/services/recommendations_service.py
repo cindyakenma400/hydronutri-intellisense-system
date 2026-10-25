@@ -1,4 +1,5 @@
 import os
+import json
 
 from sqlalchemy.orm import Session
 
@@ -143,7 +144,16 @@ def recommend_crop(db: Session):
         ml_crop, ml_probabilities = prediction
         ml_confidence = round(ml_probabilities.get(ml_crop, 0.0) * 100, 1)
 
-    save_recommendation(db, crop, confidence)
+    save_recommendation(
+        db,
+        crop,
+        confidence,
+        sensor,
+        ec_value,
+        best.get("limiting_factors", []),
+        best.get("suggestions", []),
+        message,
+    )
 
     return {
         "recommended_crop": crop,
@@ -168,12 +178,46 @@ def recommend_crop(db: Session):
 def save_recommendation(
     db: Session,
     crop,
-    confidence
+    confidence,
+    sensor,
+    ec_value,
+    limiting_factors,
+    suggestions,
+    message,
 ):
+    """
+    Records a recommendation, but only when it is meaningfully different
+    from the most recent one. The page polls every few seconds, so without
+    this check the history would fill with identical rows. A new entry is
+    kept only when the recommended crop or its limiting factors change.
+    """
+    factors_json = json.dumps(limiting_factors)
+
+    latest = (
+        db.query(Recommendation)
+        .order_by(Recommendation.created_at.desc())
+        .first()
+    )
+
+    if (
+        latest is not None
+        and latest.recommended_crop == crop
+        and (latest.limiting_factors or "[]") == factors_json
+    ):
+        return latest
 
     recommendation = Recommendation(
         recommended_crop=crop,
-        confidence=confidence
+        confidence=confidence,
+        soil_moisture=sensor.soil_moisture,
+        soil_ph=sensor.ph,
+        nitrogen=sensor.nitrogen,
+        phosphorus=sensor.phosphorus,
+        potassium=sensor.potassium,
+        ec=ec_value,
+        limiting_factors=factors_json,
+        suggestions=json.dumps(suggestions),
+        message=message,
     )
 
     db.add(recommendation)
@@ -183,10 +227,41 @@ def save_recommendation(
     return recommendation
 
 
-def get_recommendation_history(db: Session):
+def _parse_list(value):
+    """Turns a stored JSON string back into a list, tolerating old rows."""
+    if not value:
+        return []
+    try:
+        parsed = json.loads(value)
+        return parsed if isinstance(parsed, list) else []
+    except (ValueError, TypeError):
+        return []
 
-    return (
+
+def get_recommendation_history(db: Session, limit: int = 50):
+
+    records = (
         db.query(Recommendation)
         .order_by(Recommendation.created_at.desc())
+        .limit(limit)
         .all()
     )
+
+    return [
+        {
+            "id": r.id,
+            "recommended_crop": r.recommended_crop,
+            "confidence": r.confidence,
+            "soil_moisture": r.soil_moisture or 0.0,
+            "soil_ph": r.soil_ph or 0.0,
+            "nitrogen": r.nitrogen or 0.0,
+            "phosphorus": r.phosphorus or 0.0,
+            "potassium": r.potassium or 0.0,
+            "ec": r.ec or 0.0,
+            "limiting_factors": _parse_list(r.limiting_factors),
+            "suggestions": _parse_list(r.suggestions),
+            "message": r.message or "",
+            "created_at": r.created_at,
+        }
+        for r in records
+    ]

@@ -1,3 +1,5 @@
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -29,12 +31,17 @@ init_db()
 # Allow the Next.js frontend to call this API, whether it is opened on
 # this computer or from a phone/tablet on the same local network
 # (e.g. http://192.168.1.20:3000).
+_origins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+_frontend_url = os.getenv("FRONTEND_URL")
+if _frontend_url:
+    _origins.append(_frontend_url)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-    ],
+    allow_origins=_origins,
     allow_origin_regex=(
         r"http://(10\.\d+\.\d+\.\d+"
         r"|192\.168\.\d+\.\d+"
