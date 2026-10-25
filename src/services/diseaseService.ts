@@ -4,13 +4,16 @@ import {
   DiseaseHistoryItem,
 } from "@/types/disease";
 
-export function analyzeDisease(file: File, crop: string = "tomato") {
+export function analyzeDisease(file: File) {
   return apiUpload<DiseaseResult>("/disease/analyze", file, {
-    crop,
     source: "Web Upload",
   });
 }
 
 export function getDiseaseHistory() {
   return apiGet<DiseaseHistoryItem[]>("/disease/history");
+}
+
+export function getLatestCapture() {
+  return apiGet<DiseaseHistoryItem | null>("/disease/latest-capture");
 }
