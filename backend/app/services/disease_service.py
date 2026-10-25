@@ -14,7 +14,11 @@ import numpy as np
 from PIL import Image
 import io
 
-import tensorflow as tf
+try:
+    import tflite_runtime.interpreter as tflite
+except ImportError:
+    import tensorflow as tf
+    tflite = tf.lite
 
 from sqlalchemy.orm import Session
 from app.models.disease import DiseaseDetection
@@ -188,7 +192,7 @@ def _load_model():
         _model = False
         return False
 
-    interpreter = tf.lite.Interpreter(model_path=str(model_path))
+    interpreter = tflite.Interpreter(model_path=str(model_path))
     interpreter.allocate_tensors()
 
     labels = []
